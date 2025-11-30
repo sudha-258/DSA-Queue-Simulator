@@ -1,61 +1,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #define PORT 5000
 #define BUFFER_SIZE 100
 
 int main() {
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
-    char buffer[BUFFER_SIZE] = {0};
-
-    // Create socket
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Socket failed");
-        exit(EXIT_FAILURE);
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+        printf("WSAStartup failed. Error: %d\n", WSAGetLastError());
+        return 1;
     }
 
-    // Bind address
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        perror("Bind failed");
-        exit(EXIT_FAILURE);
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        printf("Socket creation error. Error: %d\n", WSAGetLastError());
+        WSACleanup();
+        return 1;
     }
 
-    // Start listening
-    if (listen(server_fd, 3) < 0) {
-        perror("Listen failed");
-        exit(EXIT_FAILURE);
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+        printf("Invalid address\n");
+        closesocket(sock);
+        WSACleanup();
+        return 1;
     }
 
-    printf("Server listening on port %d...\n", PORT);
-
-    // Accept connections
-    if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
-        perror("Accept failed");
-        exit(EXIT_FAILURE);
+    if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
+        printf("Connection failed. Error: %d\n", WSAGetLastError());
+        closesocket(sock);
+        WSACleanup();
+        return 1;
     }
 
-    printf("Client connected...\n");
+    printf("Connected to server.\n");
 
+    char buffer[BUFFER_SIZE];
     while (1) {
-        int bytes_read = read(new_socket, buffer, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            printf("Client disconnected.\n");
+        printf("Enter message: ");
+        fgets(buffer, BUFFER_SIZE, stdin);
+
+        send(sock, buffer, (int)strlen(buffer), 0);
+
+        if (strncmp(buffer, "exit", 4) == 0) {
             break;
         }
-        printf("Received: %s\n", buffer);
-        memset(buffer, 0, BUFFER_SIZE); // Clear buffer
     }
 
-    close(new_socket);
-    close(server_fd);
+    closesocket(sock);
+    WSACleanup();
     return 0;
 }

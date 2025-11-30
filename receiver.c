@@ -1,35 +1,36 @@
+#include <windows.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
 
-#define MSG_QUEUE_KEY 1234
+#define PIPE_NAME "\\\\.\\pipe\\VehicleQueue"
 #define MAX_TEXT 100
 
-struct message {
-    long msg_type;
-    char vehicleQueue[MAX_TEXT];
-};
-
 int main() {
-    key_t key = MSG_QUEUE_KEY;
-    int msgid;
-    struct message msg;
-    
-    msgid = msgget(key, 0666 | IPC_CREAT);
-    if (msgid == -1) {
-        perror("msgget failed");
-        exit(1);
+    HANDLE hPipe = CreateFile(
+        PIPE_NAME,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        printf("Failed to open pipe. Error: %d\n", GetLastError());
+        return 1;
     }
-    printf("Receiver is running... Waiting for messages.\n");
-    while (1) {
-        // Receive message (blocking call)
-        if (msgrcv(msgid, &msg, sizeof(msg.vehicleQueue), 1, 0) == -1) {
-            perror("msgrcv failed");
-            exit(1);
-        }
-        printf("Received: %s\n", msg.vehicleQueue);
+
+    char msg[MAX_TEXT] = "Car-Bus-Bike";
+    DWORD bytesWritten;
+
+    if (!WriteFile(hPipe, msg, (DWORD)strlen(msg) + 1, &bytesWritten, NULL)) {
+        printf("WriteFile failed. Error: %d\n", GetLastError());
+        return 1;
     }
+
+    printf("Message sent: %s\n", msg);
+
+    CloseHandle(hPipe);
     return 0;
 }
