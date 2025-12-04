@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <windows.h> // For sleep()
+#include <windows.h>  // For Sleep()
 
 #define FILENAME "vehicles.data"
 
-// Function to generate a random vehicle number
+// Generate a random vehicle ID
 void generateVehicleNumber(char* buffer) {
     buffer[0] = 'A' + rand() % 26;
     buffer[1] = 'A' + rand() % 26;
@@ -18,10 +18,15 @@ void generateVehicleNumber(char* buffer) {
     buffer[8] = '\0';
 }
 
-// Function to generate a random lane
-char generateLane() {
-    char lanes[] = {'A', 'B', 'C', 'D'};
-    return lanes[rand() % 4];
+// Generate random road A–D
+char generateRoad() {
+    char roads[] = {'A', 'B', 'C', 'D'};
+    return roads[rand() % 4];
+}
+
+// Generate random lane number 1–3
+int generateLane() {
+    return (rand() % 3) + 1;
 }
 
 int main() {
@@ -31,20 +36,21 @@ int main() {
         return 1;
     }
 
-    srand(time(NULL)); // Initialize random seed
+    srand(time(NULL));
 
     while (1) {
         char vehicle[9];
         generateVehicleNumber(vehicle);
-        char lane = generateLane();
+        char road = generateRoad();
+        int lane = generateLane();
 
-        // Write to file
-        fprintf(file, "%s:%c\n", vehicle, lane);
-        fflush(file); // Ensure data is written immediately
+        // Format: ROAD LANE VEHICLE_ID
+        fprintf(file, "%c %d %s\n", road, lane, vehicle);
+        fflush(file);
 
-        printf("Generated: %s:%c\n", vehicle, lane); // Print to console
+        printf("Generated: %c %d %s\n", road, lane, vehicle);
 
-        sleep(1); // Wait 1 second before generating next entry
+        Sleep(1000);  // Windows sleep (1 second)
     }
 
     fclose(file);
