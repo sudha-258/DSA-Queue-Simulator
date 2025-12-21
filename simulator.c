@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include"queue.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800 
@@ -13,12 +14,6 @@
 #define MAIN_FONT "C:\\Windows\\Fonts\\Arial.ttf"
 #define VEHICLE_FILE "vehicles.data"
 
-// Vehicle structure
-typedef struct {
-    char id[10];
-    char road;   // A/B/C/D
-    int lane;    // 1/2/3
-} Vehicle;
 
 // Shared data between threads
 typedef struct {
@@ -49,6 +44,37 @@ void refreshScreen();
 int getPriorityRoad();
 
 int main(int argc, char* argv[]) {
+    Queue AL2, BL2, CL2, DL2;
+    
+    int vehicleID = 1;
+
+
+    initQueue(&AL2);
+    initQueue(&BL2);
+    initQueue(&CL2);
+    initQueue(&DL2);
+
+    Vehicle v = { .id = vehicleID++ };
+
+    enqueue(&AL2, v);
+    enqueue(&AL2, v);
+    enqueue(&BL2, v);
+
+    printf("AL2 size: %d\n", queueSize(&AL2));
+    printf("BL2 size: %d\n", queueSize(&BL2));
+
+    dequeue(&AL2);
+    printf("AL2 size after dequeue: %d\n", queueSize(&AL2));
+
+
+
+
+
+
+
+
+
+
     if (!initSDL()) return -1;
 
     SDL_Event event;
