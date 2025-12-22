@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+<<<<<<< HEAD
 #include <unistd.h>   // for sleep()
+=======
+#include <windows.h>   // for sleep()
+>>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
 
 #define MAX 10
 
