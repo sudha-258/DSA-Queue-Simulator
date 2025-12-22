@@ -1,15 +1,15 @@
 #ifndef QUEUE_H
 #define QUEUE_H
-#include<stdio.h>
 #include<stdbool.h>
-
 #define MAX_QUEUE 50
 
 typedef struct {
     int id;
-    char road;   // A/B/C/D
+    char road;   // 'A','B','C','D'
     int arrivalTime;
-    int lane;          // vehicle id
+    int lane;          // 0..2
+    int x, y;          // position for SDL
+    bool active;       // is vehicle active
 } Vehicle;
 
 typedef struct {
