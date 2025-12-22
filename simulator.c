@@ -1,12 +1,6 @@
-#include <SDL2/SDL.h>
-<<<<<<< HEAD
 
-#include <stdio.h>
-
-=======
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
->>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
 #include <stdbool.h>
 #include <windows.h>
 #include <time.h>
@@ -16,80 +10,10 @@
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
-<<<<<<< HEAD
-
-=======
->>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
 #define ROAD_WIDTH 150
 #define LANE_WIDTH 50
 #define VEHICLE_WIDTH 40
 #define VEHICLE_HEIGHT 30
-<<<<<<< HEAD
-#define NUM_VEHICLES 8
-#define LIGHT_DURATION 3000  // 3 seconds per light
-
-typedef struct {
-    int x, y;
-    char road; // 'A'=top, 'B'=bottom, 'C'=right, 'D'=left
-    bool active;
-} Vehicle;
-
-// Global SDL objects
-SDL_Window* window = NULL;
-SDL_Renderer* renderer = NULL;
-
-// Traffic light state (0=A, 1=B, 2=C, 3=D)
-int currentGreen = 0;
-Uint32 lastSwitchTime = 0;
-
-// Vehicles
-Vehicle vehicles[NUM_VEHICLES];
-
-bool initSDL() {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL Init failed: %s\n", SDL_GetError());
-        return false;
-    }
-    window = SDL_CreateWindow("4-Way Traffic Junction", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-    if (!window) return false;
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) return false;
-    return true;
-}
-
-// Initialize vehicles at road entries
-void initVehicles() {
-    for (int i = 0; i < NUM_VEHICLES; i++) {
-        vehicles[i].active = true;
-        switch (i % 4) {
-            case 0: vehicles[i].road = 'A'; vehicles[i].x = WINDOW_WIDTH/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; vehicles[i].y = 0; break;
-            case 1: vehicles[i].road = 'B'; vehicles[i].x = WINDOW_WIDTH/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; vehicles[i].y = WINDOW_HEIGHT; break;
-            case 2: vehicles[i].road = 'C'; vehicles[i].x = WINDOW_WIDTH; vehicles[i].y = WINDOW_HEIGHT/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; break;
-            case 3: vehicles[i].road = 'D'; vehicles[i].x = 0; vehicles[i].y = WINDOW_HEIGHT/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; break;
-        }
-    }
-}
-
-// Draw roads
-void drawRoads() {
-    SDL_SetRenderDrawColor(renderer, 200,200,200,255);
-
-    SDL_Rect vertical = {WINDOW_WIDTH/2 - ROAD_WIDTH/2, 0, ROAD_WIDTH, WINDOW_HEIGHT};
-    SDL_Rect horizontal = {0, WINDOW_HEIGHT/2 - ROAD_WIDTH/2, WINDOW_WIDTH, ROAD_WIDTH};
-    SDL_RenderFillRect(renderer, &vertical);
-    SDL_RenderFillRect(renderer, &horizontal);
-
-    // Lane lines
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
-    for(int i=1;i<4;i++){
-        // Horizontal
-        SDL_RenderDrawLine(renderer, 0, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i,
-                                      WINDOW_WIDTH, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i);
-        // Vertical
-        SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, 0,
-                                      WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_HEIGHT);
-=======
 #define LANES_PER_ROAD 3
 #define VEHICLE_SPEED 2  // pixels per frame
 
@@ -163,23 +87,12 @@ void drawRoads() {
                            WINDOW_WIDTH, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + i*LANE_WIDTH);
         SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + i*LANE_WIDTH, 0,
                            WINDOW_WIDTH/2 - ROAD_WIDTH/2 + i*LANE_WIDTH, WINDOW_HEIGHT);
->>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
     }
 }
 
 // Draw traffic lights
 void drawLights() {
     SDL_Rect rect = {0,0,20,20};
-<<<<<<< HEAD
-    for(int i=0;i<4;i++){
-        if(currentGreen==i) SDL_SetRenderDrawColor(renderer,0,255,0,255);
-        else SDL_SetRenderDrawColor(renderer,255,0,0,255);
-        switch(i){
-            case 0: rect.x = WINDOW_WIDTH/2 - 10; rect.y = 10; break; // A top
-            case 1: rect.x = WINDOW_WIDTH/2 - 10; rect.y = WINDOW_HEIGHT - 30; break; // B bottom
-            case 2: rect.x = WINDOW_WIDTH - 30; rect.y = WINDOW_HEIGHT/2 - 10; break; // C right
-            case 3: rect.x = 10; rect.y = WINDOW_HEIGHT/2 - 10; break; // D left
-=======
     for(int i=0;i<NUM_ROADS;i++){
         SDL_SetRenderDrawColor(renderer, (currentGreen==i)?0:255, (currentGreen==i)?255:0,0,255);
         switch(i){
@@ -187,7 +100,6 @@ void drawLights() {
             case 1: rect.x=WINDOW_WIDTH/2-10; rect.y=WINDOW_HEIGHT-30; break;
             case 2: rect.x=WINDOW_WIDTH-30; rect.y=WINDOW_HEIGHT/2-10; break;
             case 3: rect.x=10; rect.y=WINDOW_HEIGHT/2-10; break;
->>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
         }
         SDL_RenderFillRect(renderer, &rect);
     }
