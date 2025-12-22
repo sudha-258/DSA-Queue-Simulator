@@ -1,21 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
+#include <windows.h>
 #include <time.h>
-#include <unistd.h>
 
-#define MSG_QUEUE_KEY 1234 // this is uniqe key to perform IPC
+#define PIPE_NAME "\\\\.\\pipe\\VehicleQueue"
 #define MAX_TEXT 100
 
 struct message {
-    long msg_type;
     char vehicleQueue[MAX_TEXT];
 };
 
 // Generate a random vehicle number
-// Format:   <2 alpha><1 digit><2 alpha><3 digit>
+// Format: <2 alpha><1 digit><2 alpha><3 digit>
 void generateVehicleNumber(char* buffer) {
     buffer[0] = 'A' + rand() % 26;
     buffer[1] = 'A' + rand() % 26;
@@ -35,34 +32,46 @@ char generateLane() {
 }
 
 int main() {
-    key_t key = MSG_QUEUE_KEY;
-    int msgid;
-    struct message msg;
+    srand((unsigned int)time(NULL));
 
-    // Create a message queue
-    msgid = msgget(key, 0666 | IPC_CREAT);
-    if (msgid == -1) {
-        perror("msgget failed");
-        exit(1);
+    HANDLE hPipe = CreateNamedPipe(
+        PIPE_NAME,
+        PIPE_ACCESS_OUTBOUND,
+        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+        1,              // max instances
+        MAX_TEXT,       // out buffer size
+        MAX_TEXT,       // in buffer size
+        0,              // default timeout
+        NULL
+    );
+
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        printf("Failed to create pipe. Error: %d\n", GetLastError());
+        return 1;
     }
 
-    srand(time(NULL));
+    printf("Waiting for receiver to connect...\n");
+    ConnectNamedPipe(hPipe, NULL);
+    printf("Receiver connected!\n");
+
+    struct message msg;
 
     while (1) {
         char vehicle[9];
         generateVehicleNumber(vehicle);
         char lane = generateLane();
-        msg.msg_type = 1;
         snprintf(msg.vehicleQueue, MAX_TEXT, "%s:%c", vehicle, lane);
 
-        // Send message
-        if (msgsnd(msgid, &msg, sizeof(msg.vehicleQueue), 0) == -1) {
-            perror("msgsnd failed");
-            exit(1);
+        DWORD bytesWritten;
+        if (!WriteFile(hPipe, msg.vehicleQueue, (DWORD)strlen(msg.vehicleQueue) + 1, &bytesWritten, NULL)) {
+            printf("WriteFile failed. Error: %d\n", GetLastError());
+            break;
         }
 
         printf("New vehicle added: %s\n", msg.vehicleQueue);
-        sleep(1);
+        Sleep(1000); // 1 second delay
     }
+
+    CloseHandle(hPipe);
     return 0;
 }

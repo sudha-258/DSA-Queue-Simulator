@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "Traffic Light",
+			"path": "."
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Traffic Light"
+	}
+}
