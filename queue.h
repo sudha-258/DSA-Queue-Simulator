@@ -1,5 +1,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
+#include<stdio.h>
+#include<stdbool.h>
 
 #define MAX_QUEUE 50
 
@@ -9,6 +11,14 @@ typedef struct {
     int arrivalTime;
     int lane;          // vehicle id
 } Vehicle;
+
+typedef struct {
+    Vehicle v;      // logical vehicle (queue)
+    int x, y;
+    bool active;
+    bool waiting;
+} VisualVehicle;
+
 
 typedef struct {
     Vehicle data[MAX_QUEUE];

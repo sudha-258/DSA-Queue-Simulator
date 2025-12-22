@@ -3,6 +3,9 @@
 #include<stdbool.h>
 #include<windows.h>
 #include<string.h>
+#include"queue.h"
+#include"junction.h"
+#include"lane.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
@@ -166,6 +169,19 @@ DWORD WINAPI vehicleInput(LPVOID arg){
 }
 
 int main(){
+    Junction j;
+
+initQueue(&j.AL2.vehicles);
+j.AL2.isPriority = 1;
+
+initQueue(&j.BL2.vehicles);
+initQueue(&j.CL2.vehicles);
+initQueue(&j.DL2.vehicles);
+
+
+
+
+
     srand((unsigned int)time(NULL));
     mutex=SDL_CreateMutex();
 
