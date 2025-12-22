@@ -13,14 +13,6 @@ typedef struct {
 } Vehicle;
 
 typedef struct {
-    Vehicle v;      // logical vehicle (queue)
-    int x, y;
-    bool active;
-    bool waiting;
-} VisualVehicle;
-
-
-typedef struct {
     Vehicle data[MAX_QUEUE];
     int front;
     int rear;
