@@ -6,6 +6,7 @@
 typedef struct {
     int id;
     char road;   // A/B/C/D
+    int arrivalTime;
     int lane;          // vehicle id
 } Vehicle;
 
@@ -21,7 +22,7 @@ void initQueue(Queue *q);
 int isEmpty(Queue *q);
 int isFull(Queue *q);
 int enqueue(Queue *q, Vehicle v);
-int dequeue(Queue *q);
+Vehicle dequeue(Queue *q);
 int queueSize(Queue *q);
 
 #endif

@@ -28,13 +28,18 @@ int enqueue(Queue *q, Vehicle v) {
 }
 
 /* Dequeue */
-int dequeue(Queue *q) {
-    if (isEmpty(q)) return 0;
+Vehicle dequeue(Queue *q) {
+    Vehicle dummy = {-1, '?', -1, -1};
 
+    if (isEmpty(q))
+        return dummy;
+
+    Vehicle v = q->data[q->front];
     q->front = (q->front + 1) % MAX_QUEUE;
     q->count--;
-    return 1;
+    return v;
 }
+
 
 /* Size */
 int queueSize(Queue *q) {
