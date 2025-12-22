@@ -1,213 +1,161 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <windows.h>
+
 #include <stdio.h>
-#include <string.h>
+
 #include <stdbool.h>
 
 #define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800 
+#define WINDOW_HEIGHT 800
+
 #define ROAD_WIDTH 150
 #define LANE_WIDTH 50
-#define MAX_VEHICLES 100
-#define MAIN_FONT "C:\\Windows\\Fonts\\Arial.ttf"
-#define VEHICLE_FILE "vehicles.data"
+#define VEHICLE_WIDTH 40
+#define VEHICLE_HEIGHT 30
+#define NUM_VEHICLES 8
+#define LIGHT_DURATION 3000  // 3 seconds per light
 
-// Vehicle structure
 typedef struct {
-    char id[10];
-    char road;   // A/B/C/D
-    int lane;    // 1/2/3
+    int x, y;
+    char road; // 'A'=top, 'B'=bottom, 'C'=right, 'D'=left
+    bool active;
 } Vehicle;
 
-// Shared data between threads
-typedef struct {
-    int currentGreen;    // 0=A,1=B,2=C,3=D
-    int counts[4];       // number of vehicles waiting in priority lane (lane 2)
-    SDL_mutex* mutex;
-} SharedData;
-
-SharedData sharedData;
-
-// Vehicle queue
-Vehicle vehicleQueue[MAX_VEHICLES];
-int vehicleCount = 0;
-
-// SDL objects
+// Global SDL objects
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-TTF_Font* font = NULL;
 
-// Function declarations
-bool initSDL();
-void drawRoads();
-void drawLights();
-void drawText(const char* text, int x, int y);
-DWORD WINAPI readVehicles(LPVOID arg);
-DWORD WINAPI manageLights(LPVOID arg);
-void refreshScreen();
-int getPriorityRoad();
+// Traffic light state (0=A, 1=B, 2=C, 3=D)
+int currentGreen = 0;
+Uint32 lastSwitchTime = 0;
 
-int main(int argc, char* argv[]) {
-    if (!initSDL()) return -1;
-
-    SDL_Event event;
-    bool running = true;
-
-    // Initialize shared data
-    sharedData.currentGreen = 0;
-    for(int i=0;i<4;i++) sharedData.counts[i]=0;
-    sharedData.mutex = SDL_CreateMutex();
-
-    // Start threads
-    HANDLE hReadThread = CreateThread(NULL,0,readVehicles,NULL,0,NULL);
-    HANDLE hLightThread = CreateThread(NULL,0,manageLights,NULL,0,NULL);
-
-    while(running) {
-        while(SDL_PollEvent(&event)) {
-            if(event.type == SDL_QUIT) running = false;
-        }
-        refreshScreen();
-        SDL_Delay(50); // 20 FPS
-    }
-
-    WaitForSingleObject(hReadThread, INFINITE);
-    WaitForSingleObject(hLightThread, INFINITE);
-
-    SDL_DestroyMutex(sharedData.mutex);
-    if(font) TTF_CloseFont(font);
-    if(renderer) SDL_DestroyRenderer(renderer);
-    if(window) SDL_DestroyWindow(window);
-    TTF_Quit();
-    SDL_Quit();
-    return 0;
-}
+// Vehicles
+Vehicle vehicles[NUM_VEHICLES];
 
 bool initSDL() {
-    if(SDL_Init(SDL_INIT_VIDEO) <0) { SDL_Log("SDL Init failed: %s",SDL_GetError()); return false; }
-    if(TTF_Init() <0) { SDL_Log("TTF Init failed: %s",TTF_GetError()); return false; }
-
-    window = SDL_CreateWindow("Traffic Junction", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("SDL Init failed: %s\n", SDL_GetError());
+        return false;
+    }
+    window = SDL_CreateWindow("4-Way Traffic Junction", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                               WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-    if(!window){ SDL_Log("Window failed: %s", SDL_GetError()); return false; }
-
-    renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
-    if(!renderer){ SDL_Log("Renderer failed: %s",SDL_GetError()); return false; }
-
-    font = TTF_OpenFont(MAIN_FONT,24);
-    if(!font){ SDL_Log("Font failed: %s",TTF_GetError()); return false; }
-
+    if (!window) return false;
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) return false;
     return true;
 }
 
+// Initialize vehicles at road entries
+void initVehicles() {
+    for (int i = 0; i < NUM_VEHICLES; i++) {
+        vehicles[i].active = true;
+        switch (i % 4) {
+            case 0: vehicles[i].road = 'A'; vehicles[i].x = WINDOW_WIDTH/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; vehicles[i].y = 0; break;
+            case 1: vehicles[i].road = 'B'; vehicles[i].x = WINDOW_WIDTH/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; vehicles[i].y = WINDOW_HEIGHT; break;
+            case 2: vehicles[i].road = 'C'; vehicles[i].x = WINDOW_WIDTH; vehicles[i].y = WINDOW_HEIGHT/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; break;
+            case 3: vehicles[i].road = 'D'; vehicles[i].x = 0; vehicles[i].y = WINDOW_HEIGHT/2 - LANE_WIDTH + (i%2)*LANE_WIDTH; break;
+        }
+    }
+}
+
+// Draw roads
 void drawRoads() {
     SDL_SetRenderDrawColor(renderer, 200,200,200,255);
+
     SDL_Rect vertical = {WINDOW_WIDTH/2 - ROAD_WIDTH/2, 0, ROAD_WIDTH, WINDOW_HEIGHT};
     SDL_Rect horizontal = {0, WINDOW_HEIGHT/2 - ROAD_WIDTH/2, WINDOW_WIDTH, ROAD_WIDTH};
     SDL_RenderFillRect(renderer, &vertical);
     SDL_RenderFillRect(renderer, &horizontal);
 
+    // Lane lines
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
-    for(int i=0;i<=3;i++){
-        // horizontal lanes
-        SDL_RenderDrawLine(renderer,0,WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_WIDTH/2 - ROAD_WIDTH/2, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i);
-        SDL_RenderDrawLine(renderer,WINDOW_WIDTH,WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_WIDTH/2 + ROAD_WIDTH/2, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i);
-        // vertical lanes
-        SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i,0, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_HEIGHT/2 - ROAD_WIDTH/2);
-        SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i,WINDOW_HEIGHT, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_HEIGHT/2 + ROAD_WIDTH/2);
+    for(int i=1;i<4;i++){
+        // Horizontal
+        SDL_RenderDrawLine(renderer, 0, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i,
+                                      WINDOW_WIDTH, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + LANE_WIDTH*i);
+        // Vertical
+        SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, 0,
+                                      WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_HEIGHT);
     }
-
-    drawText("A", WINDOW_WIDTH/2, 10);
-    drawText("B", WINDOW_WIDTH/2, WINDOW_HEIGHT - 40);
-    drawText("C", WINDOW_WIDTH - 40, WINDOW_HEIGHT/2);
-    drawText("D", 10, WINDOW_HEIGHT/2);
 }
 
+// Draw traffic lights
 void drawLights() {
-    SDL_Rect rect = {WINDOW_WIDTH/2 - 25, WINDOW_HEIGHT/2 - 25, 50, 50};
+    SDL_Rect rect = {0,0,20,20};
     for(int i=0;i<4;i++){
-        if(sharedData.currentGreen==i) SDL_SetRenderDrawColor(renderer,0,255,0,255);
+        if(currentGreen==i) SDL_SetRenderDrawColor(renderer,0,255,0,255);
         else SDL_SetRenderDrawColor(renderer,255,0,0,255);
         switch(i){
-            case 0: rect.x = WINDOW_WIDTH/2 -25; rect.y=10; break;   // A top
-            case 1: rect.x = WINDOW_WIDTH/2 -25; rect.y=WINDOW_HEIGHT-60; break; // B bottom
-            case 2: rect.x = WINDOW_WIDTH-60; rect.y=WINDOW_HEIGHT/2 -25; break; // C right
-            case 3: rect.x =10; rect.y=WINDOW_HEIGHT/2 -25; break; // D left
+            case 0: rect.x = WINDOW_WIDTH/2 - 10; rect.y = 10; break; // A top
+            case 1: rect.x = WINDOW_WIDTH/2 - 10; rect.y = WINDOW_HEIGHT - 30; break; // B bottom
+            case 2: rect.x = WINDOW_WIDTH - 30; rect.y = WINDOW_HEIGHT/2 - 10; break; // C right
+            case 3: rect.x = 10; rect.y = WINDOW_HEIGHT/2 - 10; break; // D left
         }
         SDL_RenderFillRect(renderer,&rect);
     }
 }
 
-void drawText(const char* text, int x, int y){
-    SDL_Color color = {0,0,0,255};
-    SDL_Surface* surf = TTF_RenderText_Solid(font,text,color);
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer,surf);
-    SDL_Rect dst = {x,y,0,0};
-    SDL_QueryTexture(tex,NULL,NULL,&dst.w,&dst.h);
-    SDL_RenderCopy(renderer,tex,NULL,&dst);
-    SDL_FreeSurface(surf);
-    SDL_DestroyTexture(tex);
-}
+// Move vehicles based on traffic light
+void moveVehicles() {
+    for (int i=0;i<NUM_VEHICLES;i++){
+        if(!vehicles[i].active) continue;
+        int roadIdx = vehicles[i].road-'A';
+        if(roadIdx != currentGreen) continue;
 
-DWORD WINAPI readVehicles(LPVOID arg){
-    while(1){
-        FILE* file = fopen(VEHICLE_FILE,"r");
-        if(!file){ Sleep(2000); continue; }
-
-        SDL_LockMutex(sharedData.mutex);
-        vehicleCount=0;
-        for(int i=0;i<4;i++) sharedData.counts[i]=0;
-
-        char line[50];
-        while(fgets(line,sizeof(line),file) && vehicleCount<MAX_VEHICLES){
-            line[strcspn(line,"\n")]=0;
-            Vehicle v;
-            if(sscanf(line,"%c %d %s",&v.road,&v.lane,v.id)==3){
-                vehicleQueue[vehicleCount++] = v;
-                if(v.lane==2){ // priority lane
-                    int idx = v.road-'A';
-                    if(idx>=0 && idx<4) sharedData.counts[idx]++;
-                }
-            }
+        switch(vehicles[i].road){
+            case 'A': vehicles[i].y += 2; if(vehicles[i].y>WINDOW_HEIGHT) vehicles[i].active=false; break;
+            case 'B': vehicles[i].y -= 2; if(vehicles[i].y<0) vehicles[i].active=false; break;
+            case 'C': vehicles[i].x -= 2; if(vehicles[i].x<0) vehicles[i].active=false; break;
+            case 'D': vehicles[i].x += 2; if(vehicles[i].x>WINDOW_WIDTH) vehicles[i].active=false; break;
         }
-        SDL_UnlockMutex(sharedData.mutex);
-        fclose(file);
-        Sleep(1000);
     }
-    return 0;
 }
 
-int getPriorityRoad(){
-    SDL_LockMutex(sharedData.mutex);
-    int road=-1;
-    for(int i=0;i<4;i++){
-        if(sharedData.counts[i]>10){ road=i; break; }
+// Draw vehicles
+void drawVehicles() {
+    SDL_SetRenderDrawColor(renderer, 0,0,255,255);
+    for(int i=0;i<NUM_VEHICLES;i++){
+        if(!vehicles[i].active) continue;
+        SDL_Rect rect = {vehicles[i].x, vehicles[i].y, VEHICLE_WIDTH, VEHICLE_HEIGHT};
+        SDL_RenderFillRect(renderer,&rect);
     }
-    SDL_UnlockMutex(sharedData.mutex);
-    return road;
 }
 
-DWORD WINAPI manageLights(LPVOID arg){
-    int order[4] = {0,1,2,3};
-    int idx=0;
-    while(1){
-        int prio = getPriorityRoad();
-        SDL_LockMutex(sharedData.mutex);
-        if(prio!=-1) sharedData.currentGreen=prio;
-        else{
-            sharedData.currentGreen = order[idx];
-            idx = (idx+1)%4;
+int main(int argc, char* argv[]) {
+    if(!initSDL()) return -1;
+    initVehicles();
+
+    bool running = true;
+    SDL_Event event;
+
+    lastSwitchTime = SDL_GetTicks();
+
+    while(running){
+        while(SDL_PollEvent(&event)){
+            if(event.type==SDL_QUIT) running=false;
         }
-        SDL_UnlockMutex(sharedData.mutex);
-        Sleep(5000);
-    }
-    return 0;
-}
 
-void refreshScreen(){
-    SDL_SetRenderDrawColor(renderer,255,255,255,255);
-    SDL_RenderClear(renderer);
-    drawRoads();
-    drawLights();
-    SDL_RenderPresent(renderer);
+        Uint32 now = SDL_GetTicks();
+        if(now - lastSwitchTime > LIGHT_DURATION){
+            currentGreen = (currentGreen+1)%4; // rotate green light
+            lastSwitchTime = now;
+        }
+
+        moveVehicles();
+
+        SDL_SetRenderDrawColor(renderer, 0,150,0,255);
+        SDL_RenderClear(renderer);
+
+        drawRoads();
+        drawLights();
+        drawVehicles();
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(20); // ~50 FPS
+    }
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
 }
