@@ -5,6 +5,7 @@
 
 #define FILENAME "vehicles.data"
 
+
 // Generate a random vehicle ID
 void generateVehicleNumber(char* buffer) {
     buffer[0] = 'A' + rand() % 26;
@@ -39,20 +40,21 @@ int main() {
     srand(time(NULL));
 
     while (1) {
-        char vehicle[9];
-        generateVehicleNumber(vehicle);
-        char road = generateRoad();
-        int lane = generateLane();
+    for (char road = 'A'; road <= 'D'; road++) {  // Roads A-D
+        for (int lane = 1; lane <= 3; lane++) {   // Lanes 1-3
+            char vehicle[9];
+            generateVehicleNumber(vehicle);
 
-        // Format: ROAD LANE VEHICLE_ID
-        fprintf(file, "%c %d %s\n", road, lane, vehicle);
-        fflush(file);
-
-        printf("Generated: %c %d %s\n", road, lane, vehicle);
-
-        Sleep(1000);  // Windows sleep (1 second)
+            fprintf(file, "%c %d %s\n", road, lane, vehicle);
+            fflush(file);
+            printf("Generated: %c %d %s\n", road, lane, vehicle);
+        }
     }
+    Sleep(1000);  // Generate every 1 second
+}
+
 
     fclose(file);
+    
     return 0;
 }
