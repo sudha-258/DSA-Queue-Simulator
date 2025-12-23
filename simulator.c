@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -105,6 +105,73 @@ void drawLights() {
     }
 }
 
+<<<<<<< HEAD
+// Move vehicles based on traffic light
+void moveVehicles() {
+    for (int i=0;i<NUM_VEHICLES;i++){
+        if(!vehicles[i].active) continue;
+        int roadIdx = vehicles[i].road-'A';
+        if(roadIdx != currentGreen) continue;
+
+        switch(vehicles[i].road){
+            case 'A': vehicles[i].y += 2; if(vehicles[i].y>WINDOW_HEIGHT) vehicles[i].active=false; break;
+            case 'B': vehicles[i].y -= 2; if(vehicles[i].y<0) vehicles[i].active=false; break;
+            case 'C': vehicles[i].x -= 2; if(vehicles[i].x<0) vehicles[i].active=false; break;
+            case 'D': vehicles[i].x += 2; if(vehicles[i].x>WINDOW_WIDTH) vehicles[i].active=false; break;
+        }
+    }
+}
+
+// Draw vehicles
+void drawVehicles() {
+    SDL_SetRenderDrawColor(renderer, 0,0,255,255);
+    for(int i=0;i<NUM_VEHICLES;i++){
+        if(!vehicles[i].active) continue;
+        SDL_Rect rect = {vehicles[i].x, vehicles[i].y, VEHICLE_WIDTH, VEHICLE_HEIGHT};
+        SDL_RenderFillRect(renderer,&rect);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if(!initSDL()) return -1;
+    initVehicles();
+
+    bool running = true;
+    SDL_Event event;
+
+    lastSwitchTime = SDL_GetTicks();
+
+    while(running){
+        while(SDL_PollEvent(&event)){
+            if(event.type==SDL_QUIT) running=false;
+        }
+
+        Uint32 now = SDL_GetTicks();
+        if(now - lastSwitchTime > LIGHT_DURATION){
+            currentGreen = (currentGreen+1)%4; // rotate green light
+            lastSwitchTime = now;
+        }
+
+        moveVehicles();
+
+        SDL_SetRenderDrawColor(renderer, 0,150,0,255);
+        SDL_RenderClear(renderer);
+
+        drawRoads();
+        drawLights();
+        drawVehicles();
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(20); // ~50 FPS
+    }
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
+}
+=======
 // Draw vehicles in a queue
 void drawQueue(Queue* q) {
     for(int i=0;i<queueSize(q);i++){
@@ -215,3 +282,4 @@ int main(int argc, char *argv[])
     SDL_Quit();
     return 0;
 }
+>>>>>>> 18eb85ad4ab8badc84ebcaa47b77195615f54394
