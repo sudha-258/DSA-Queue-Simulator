@@ -1,30 +1,38 @@
 #ifndef QUEUE_H
 #define QUEUE_H
-#include<stdbool.h>
-#define MAX_QUEUE 50
 
+#include <stdbool.h>
+#include <SDL2/SDL.h>
+
+#define MAX_QUEUE 100
+
+// Vehicle structure
 typedef struct {
     int id;
-    char road;   // 'A','B','C','D'
-    int arrivalTime;
-    int lane;          // 0..2
-    int x, y;          // position for SDL
-    bool active;       // is vehicle active
+    char road;      // 'A', 'B', 'C', 'D'
+    int lane;       // 1, 2, 3
+    int x, y;       // Position
+    bool active;    // Still in simulation
+    Uint32 arrivalTime;  // When vehicle entered queue
 } Vehicle;
 
+// Queue structure
 typedef struct {
     Vehicle data[MAX_QUEUE];
     int front;
     int rear;
-    int count;
+    int size;
 } Queue;
 
-/* Queue operations */
-void initQueue(Queue *q);
-int isEmpty(Queue *q);
-int isFull(Queue *q);
-int enqueue(Queue *q, Vehicle v);
-Vehicle dequeue(Queue *q);
-int queueSize(Queue *q);
+// Function prototypes
+void initQueue(Queue* q);
+bool isEmpty(Queue* q);
+bool isFull(Queue* q);
+void enqueue(Queue* q, Vehicle v);
+Vehicle dequeue(Queue* q);
+Vehicle peek(Queue* q);
+int queueSize(Queue* q);
+void displayQueue(Queue* q);
+void clearQueue(Queue* q);
 
-#endif
+#endif // QUEUE_H

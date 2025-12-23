@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
         moveVehicles();
 
         // Render
-        drawBackground();
+        drawBackground();// calls the background function
         drawRoads();
         drawLights();
 
