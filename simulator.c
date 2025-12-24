@@ -118,6 +118,9 @@ Vehicle createVehicle(char road, int lane) {
         case 'A': // From North (top)
             v.x = baseX + laneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
             v.y = -VEHICLE_HEIGHT - (rand() % 100);
+            v.dir = 'D';
+            v.hasTurned = false;
+           
             break;
         case 'B': // From South (bottom)
             v.x = baseX + laneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
@@ -300,17 +303,46 @@ void moveVehicles() {
             bool inJunction = isInJunction(v);
             
             // Road A: Coming from NORTH (moving DOWN)
-            if (v->road == 'A') {
+           // if (v->road == 'A') {
 
     // BEFORE junction → always move down
    
 
             if(v->road == 'A') {
                 // Road A vehicles start moving DOWN
-                v->dir = 'D';
-                v->hasTurned = false;
+              
 
-                if(!inJunction) {
+                if (!inJunction && !v->hasTurned) {
+                 v->y += VEHICLE_SPEED;
+                 }
+
+                // INSIDE junction → TURN ONLY ONCE
+                else if (inJunction && !v->hasTurned) {
+
+                    if (laneType == 3) {
+                     // RIGHT turn → go WEST
+                        v->dir = 'L';
+                    }
+                     else if (laneType == 2) {
+                     // STRAIGHT → stay DOWN
+                         v->dir = 'D';}
+              
+
+                v->hasTurned = true;
+                }
+            
+
+    // AFTER turn → move straight in NEW direction
+                 else {
+                        switch (v->dir) {
+                        case 'D': v->y += VEHICLE_SPEED; break;
+                        case 'L': v->x += VEHICLE_SPEED; break;
+                        case 'R': v->x -= VEHICLE_SPEED; break;
+                    }
+                }
+            
+
+                /*if(!inJunction) {
                     v->y += VEHICLE_SPEED; // Move down
                 } else {
                     if(laneType == 1) {
@@ -324,8 +356,8 @@ void moveVehicles() {
                         // AL3: Free - Turn LEFT (towards East/Road C exit)
                         v->y += VEHICLE_SPEED * TURN_SPEED_FACTOR;
                         v->x += VEHICLE_SPEED * TURN_SPEED_FACTOR;
-                    }
-                }
+                    }*/
+                
                 // Deactivate when off-screen
                 if(v->y > WINDOW_HEIGHT + VEHICLE_HEIGHT || 
                    v->x < -VEHICLE_WIDTH*2 || v->x > WINDOW_WIDTH + VEHICLE_WIDTH*2) {
@@ -419,7 +451,7 @@ void moveVehicles() {
     }
     
     SDL_UnlockMutex(mutex);
-}}
+}
 
 int calculateVehiclesToServe() {
     int totalVehicles = 0;

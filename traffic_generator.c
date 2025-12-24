@@ -33,7 +33,7 @@ void generateVehicle(VehicleData* v) {
         }
         else if(v->road == 'B'){
             int lane_rand = rand()%100;
-            if(lane_rand < 70){
+            if(lane_rand < 60){
                 v-> lane =2;
     
             }
@@ -43,7 +43,7 @@ void generateVehicle(VehicleData* v) {
         }
          else if(v->road == 'C'){
             int lane_rand = rand()%100;
-            if(lane_rand < 70){
+            if(lane_rand < 60){
                 v-> lane =2;
     
             }
@@ -53,7 +53,7 @@ void generateVehicle(VehicleData* v) {
         }
         else if(v->road == 'D'){
             int lane_rand = rand()%100;
-            if(lane_rand < 70){
+            if(lane_rand < 60){
                 v-> lane =2;
     
             }
