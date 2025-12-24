@@ -92,7 +92,12 @@ int main(int argc, char* argv[])
     f = fopen("lanec.txt", "w"); if(f) fclose(f);
     f = fopen("laned.txt", "w"); if(f) fclose(f);
     
-   
+    printf("=========================================\n");
+    printf("  Traffic Vehicle Generator Started\n");
+    printf("=========================================\n");
+    printf("Generating vehicles every %d ms\n", GENERATION_INTERVAL);
+    printf("AL2 (Priority Lane) chance: %d%%\n", AL2_PRIORITY_CHANCE);
+    printf("Press Ctrl+C to stop\n\n");
     
     int vehicleCount = 0;
     int counts[4][3] = {0};  // [road][lane]
