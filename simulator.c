@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <windows.h>
 #include <time.h>
+#include <math.h>
 #include "queue.h"
 #include "priorityQueue.h"
 
@@ -12,11 +13,14 @@
 #define LANE_WIDTH 60
 #define VEHICLE_WIDTH 25
 #define VEHICLE_HEIGHT 35
-#define VEHICLE_SPEED 3
+#define VEHICLE_SPEED 2.0
+#define TURN_SPEED_FACTOR 1.0f
 #define NUM_ROADS 4
-#define TIME_PER_VEHICLE 1000  // ms per vehicle
+#define TIME_PER_VEHICLE 1000
 #define PRIORITY_THRESHOLD_HIGH 10
 #define PRIORITY_THRESHOLD_LOW 5
+#define MIN_GREEN_DURATION 2000
+#define SAFE_DISTANCE 50
 
 // Road indices
 #define ROAD_A 0
@@ -25,30 +29,30 @@
 #define ROAD_D 3
 
 // SDL objects
-SDL_Window* window;
-SDL_Renderer* renderer;
-SDL_mutex* mutex;
+SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
+SDL_mutex* mutex = NULL;
 
 // Traffic state
 int currentGreen = -1;
 Uint32 greenLightStartTime = 0;
 Uint32 greenLightDuration = 0;
 bool isPriorityMode = false;
+int lastServedRoad = -1;
 
 // Queues for lanes
-Queue AL1, AL2, AL3;  // A: Top road
-Queue BL1, BL2, BL3;  // B: Bottom road
-Queue CL1, CL2, CL3;  // C: Right road
-Queue DL1, DL2, DL3;  // D: Left road
+Queue AL1, AL2, AL3;
+Queue BL1, BL2, BL3;
+Queue CL1, CL2, CL3;
+Queue DL1, DL2, DL3;
 
 Queue* lanes[12];
-Queue* controlLanes[4];  // Lanes that follow traffic lights (L2 lanes)
-
-// Priority queue for roads
-PriorityQueue roadQueue;
+Queue* controlLanes[4];
 
 // Statistics
 int vehiclesPassed[4] = {0};
+int totalVehiclesGenerated = 0;
+int priorityActivations = 0;
 
 void initAllQueues() {
     initQueue(&AL1); initQueue(&AL2); initQueue(&AL3);
@@ -69,6 +73,34 @@ void initLanesArray() {
     controlLanes[3] = &DL2;
 }
 
+bool isInJunction(Vehicle* v) {
+    int centerX = WINDOW_WIDTH/2;
+    int centerY = WINDOW_HEIGHT/2;
+    int junctionStart = ROAD_WIDTH/2 - 20;
+    
+    return (v->x >= (centerX - junctionStart) && v->x <= (centerX + junctionStart) &&
+            v->y >= (centerY - junctionStart) && v->y <= (centerY + junctionStart));
+}
+
+bool checkCollision(Queue* q, float x, float y) {
+    if(isEmpty(q)) return false;
+    
+    int size = queueSize(q);
+    for(int i=0; i<size; i++){
+        Vehicle* existing = &q->data[(q->front + i) % MAX_QUEUE];
+        if(!existing->active) continue;
+        
+        float dx = x - existing->x;
+        float dy = y - existing->y;
+        float distance = sqrtf(dx*dx + dy*dy);
+        
+        if(distance < SAFE_DISTANCE) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Vehicle createVehicle(char road, int lane) {
     static int vehicleID = 1;
     Vehicle v;
@@ -78,22 +110,26 @@ Vehicle createVehicle(char road, int lane) {
     v.active = true;
     v.arrivalTime = SDL_GetTicks();
 
+    int baseX = WINDOW_WIDTH/2 - ROAD_WIDTH/2;
+    int baseY = WINDOW_HEIGHT/2 - ROAD_WIDTH/2;
+    int laneOffset = (lane-1) * LANE_WIDTH;
+    
     switch(road) {
-        case 'A':
-            v.x = WINDOW_WIDTH/2 - ROAD_WIDTH/2 + (lane-1)*LANE_WIDTH + (LANE_WIDTH-VEHICLE_WIDTH)/2;
-            v.y = 0;
+        case 'A': // From North (top)
+            v.x = baseX + laneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
+            v.y = -VEHICLE_HEIGHT - (rand() % 100);
             break;
-        case 'B':
-            v.x = WINDOW_WIDTH/2 - ROAD_WIDTH/2 + (lane-1)*LANE_WIDTH + (LANE_WIDTH-VEHICLE_WIDTH)/2;
-            v.y = WINDOW_HEIGHT - VEHICLE_HEIGHT;
+        case 'B': // From South (bottom)
+            v.x = baseX + laneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
+            v.y = WINDOW_HEIGHT + (rand() % 100);
             break;
-        case 'C':
-            v.x = WINDOW_WIDTH - VEHICLE_WIDTH;
-            v.y = WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + (lane-1)*LANE_WIDTH + (LANE_WIDTH-VEHICLE_HEIGHT)/2;
+        case 'C': // From East (right)
+            v.x = WINDOW_WIDTH + (rand() % 100);
+            v.y = baseY + laneOffset + (LANE_WIDTH - VEHICLE_HEIGHT) / 2;
             break;
-        case 'D':
-            v.x = 0;
-            v.y = WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + (lane-1)*LANE_WIDTH + (LANE_WIDTH-VEHICLE_HEIGHT)/2;
+        case 'D': // From West (left)
+            v.x = -VEHICLE_WIDTH - (rand() % 100);
+            v.y = baseY + laneOffset + (LANE_WIDTH - VEHICLE_HEIGHT) / 2;
             break;
     }
     return v;
@@ -105,22 +141,35 @@ void drawBackground() {
 }
 
 void drawRoads() {
+    // Draw main road surface
     SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
     SDL_Rect vert = {WINDOW_WIDTH/2 - ROAD_WIDTH/2, 0, ROAD_WIDTH, WINDOW_HEIGHT};
     SDL_Rect hori = {0, WINDOW_HEIGHT/2 - ROAD_WIDTH/2, WINDOW_WIDTH, ROAD_WIDTH};
     SDL_RenderFillRect(renderer, &vert);
     SDL_RenderFillRect(renderer, &hori);
 
+    // Draw junction center
+    SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
+    SDL_Rect junction = {
+        WINDOW_WIDTH/2 - ROAD_WIDTH/2,
+        WINDOW_HEIGHT/2 - ROAD_WIDTH/2,
+        ROAD_WIDTH,
+        ROAD_WIDTH
+    };
+    SDL_RenderFillRect(renderer, &junction);
+
     // Lane dividers
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     for(int i=1; i<3; i++){
-        for(int x=0; x<WINDOW_WIDTH; x+=20){
-            SDL_RenderDrawLine(renderer, x, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + i*LANE_WIDTH,
-                             x+10, WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + i*LANE_WIDTH);
+        // Horizontal lanes
+        for(int x=0; x<WINDOW_WIDTH; x+=30){
+            int y = WINDOW_HEIGHT/2 - ROAD_WIDTH/2 + i*LANE_WIDTH;
+            SDL_RenderDrawLine(renderer, x, y, x+15, y);
         }
-        for(int y=0; y<WINDOW_HEIGHT; y+=20){
-            SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + i*LANE_WIDTH, y,
-                             WINDOW_WIDTH/2 - ROAD_WIDTH/2 + i*LANE_WIDTH, y+10);
+        // Vertical lanes
+        for(int y=0; y<WINDOW_HEIGHT; y+=30){
+            int x = WINDOW_WIDTH/2 - ROAD_WIDTH/2 + i*LANE_WIDTH;
+            SDL_RenderDrawLine(renderer, x, y, x, y+15);
         }
     }
 }
@@ -128,8 +177,8 @@ void drawRoads() {
 void drawLights() {
     int centerX = WINDOW_WIDTH/2;
     int centerY = WINDOW_HEIGHT/2;
-    int lightSize = 20;
-    int gap = 30;
+    int lightSize = 25;
+    int gap = 35;
 
     struct {int x, y;} lightPos[4] = {
         {centerX - lightSize/2, centerY - ROAD_WIDTH/2 - gap - lightSize},
@@ -141,12 +190,22 @@ void drawLights() {
     for(int i=0; i<NUM_ROADS; i++){
         SDL_Rect light = {lightPos[i].x, lightPos[i].y, lightSize, lightSize};
         
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+        SDL_RenderFillRect(renderer, &light);
+        
         if(currentGreen == i) {
             SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
         } else {
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
         }
-        SDL_RenderFillRect(renderer, &light);
+        
+        SDL_Rect innerLight = {
+            lightPos[i].x + 3, 
+            lightPos[i].y + 3, 
+            lightSize - 6, 
+            lightSize - 6
+        };
+        SDL_RenderFillRect(renderer, &innerLight);
         
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderDrawRect(renderer, &light);
@@ -154,212 +213,364 @@ void drawLights() {
 }
 
 void drawQueue(Queue* q, int laneType) {
+    if(isEmpty(q)) return;
+    
     for(int i=0; i<queueSize(q); i++){
         Vehicle v = q->data[(q->front + i) % MAX_QUEUE];
         if(!v.active) continue;
         
-        SDL_Rect body = {v.x, v.y, VEHICLE_WIDTH, VEHICLE_HEIGHT};
+        SDL_Rect body = {(int)v.x, (int)v.y, VEHICLE_WIDTH, VEHICLE_HEIGHT};
         
-        // Color based on lane type
-        if(laneType == 2) {  // Control lane
-            SDL_SetRenderDrawColor(renderer, 0, 100, 255, 255);  // Blue
-        } else if(laneType == 3) {  // Free lane
-            SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);  // Green
-        } else {  // Incoming
-            SDL_SetRenderDrawColor(renderer, 255, 165, 0, 255);  // Orange
+        if(laneType == 2) {
+            SDL_SetRenderDrawColor(renderer, 30, 144, 255, 255); // Blue for control lane
+        } else if(laneType == 3) {
+            SDL_SetRenderDrawColor(renderer, 50, 205, 50, 255); // Green for free lane
+        } else {
+            SDL_SetRenderDrawColor(renderer, 255, 140, 0, 255); // Orange for incoming lane
         }
         
         SDL_RenderFillRect(renderer, &body);
+        
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderDrawRect(renderer, &body);
+        
+        // Highlight priority lane AL2
+        if(v.road == 'A' && v.lane == 2) {
+            SDL_SetRenderDrawColor(renderer, 255, 215, 0, 255);
+            SDL_Rect highlight = {(int)v.x-2, (int)v.y-2, VEHICLE_WIDTH+4, VEHICLE_HEIGHT+4};
+            SDL_RenderDrawRect(renderer, &highlight);
+        }
     }
 }
 
 bool shouldStop(Vehicle* v, int laneType) {
-    if(laneType == 3) return false;  // Free lane (L3) - always go
-    if(laneType == 1) return false;  // Incoming lane - always go
+    // Lane 3 (free lane - left turns) never stops
+    if(laneType == 3) return false;
     
-    // For control lanes (L2)
+    // Lane 1 (incoming - right turns) never stops
+    if(laneType == 1) return false;
+    
+    // Lane 2 (control lane - straight) - check traffic light
     int roadIdx = v->road - 'A';
-    if(roadIdx == currentGreen) return false;
+    if(roadIdx == currentGreen) return false; // Green light
     
     int centerX = WINDOW_WIDTH/2;
     int centerY = WINDOW_HEIGHT/2;
-    int stopOffset = 100;
+    int stopDistance = ROAD_WIDTH/2 + 10;
     
     switch(v->road) {
-        case 'A': return v->y >= (centerY - stopOffset);
-        case 'B': return v->y <= (centerY + stopOffset);
-        case 'C': return v->x <= (centerX + stopOffset);
-        case 'D': return v->x >= (centerX - stopOffset);
+        case 'A': // Coming from North
+            return v->y >= (centerY - stopDistance) && v->y <= centerY;
+        case 'B': // Coming from South
+            return v->y <= (centerY + stopDistance) && v->y >= centerY;
+        case 'C': // Coming from East
+            return v->x <= (centerX + stopDistance) && v->x >= centerX;
+        case 'D': // Coming from West
+            return v->x >= (centerX - stopDistance) && v->x <= centerX;
     }
     return false;
 }
 
 void moveVehicles() {
+    // Road A vehicles start moving DOWN
+
+
+    if(!mutex) return;
     SDL_LockMutex(mutex);
     
+    // Lane 1=Incoming(Right turn), Lane 2=Control(Straight), Lane 3=Free(Left turn)
     int laneTypes[] = {1,2,3, 1,2,3, 1,2,3, 1,2,3};
     
     for(int i=0; i<12; i++){
         Queue *q = lanes[i];
+        if(isEmpty(q)) continue;
+        
         int size = queueSize(q);
+        int laneType = laneTypes[i];
         
         for(int j=0; j<size; j++){
-            Vehicle* v = &q->data[(q->front+j) % MAX_QUEUE];
+            int idx = (q->front + j) % MAX_QUEUE;
+            Vehicle* v = &q->data[idx];
+            
             if(!v->active) continue;
             
-            if(shouldStop(v, laneTypes[i])) continue;
+            // Check if should stop at red light
+            if(shouldStop(v, laneType)) continue;
             
-            switch(v->road){
-                case 'A': 
-                    v->y += VEHICLE_SPEED; 
-                    if(v->y > WINDOW_HEIGHT) v->active = false;
-                    break;
-                case 'B': 
-                    v->y -= VEHICLE_SPEED; 
-                    if(v->y < -VEHICLE_HEIGHT) v->active = false;
-                    break;
-                case 'C': 
-                    v->x -= VEHICLE_SPEED; 
-                    if(v->x < -VEHICLE_WIDTH) v->active = false;
-                    break;
-                case 'D': 
-                    v->x += VEHICLE_SPEED; 
-                    if(v->x > WINDOW_WIDTH) v->active = false;
-                    break;
+            bool inJunction = isInJunction(v);
+            
+            // Road A: Coming from NORTH (moving DOWN)
+            if (v->road == 'A') {
+
+    // BEFORE junction → always move down
+   
+
+            if(v->road == 'A') {
+                // Road A vehicles start moving DOWN
+                v->dir = 'D';
+                v->hasTurned = false;
+
+                if(!inJunction) {
+                    v->y += VEHICLE_SPEED; // Move down
+                } else {
+                    if(laneType == 1) {
+                        // AL1: Incoming - Turn RIGHT (towards West/Road D exit)
+                        v->y += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->x -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    } else if(laneType == 2) {
+                        // AL2: Control - Go STRAIGHT (continue down)
+                        v->y += VEHICLE_SPEED;
+                    } else {
+                        // AL3: Free - Turn LEFT (towards East/Road C exit)
+                        v->y += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->x += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    }
+                }
+                // Deactivate when off-screen
+                if(v->y > WINDOW_HEIGHT + VEHICLE_HEIGHT || 
+                   v->x < -VEHICLE_WIDTH*2 || v->x > WINDOW_WIDTH + VEHICLE_WIDTH*2) {
+                    v->active = false;
+                }
+            }
+
+
+            // Road B: Coming from SOUTH (moving UP)
+            else if(v->road == 'B') {
+                if(!inJunction) {
+                    v->y -= VEHICLE_SPEED; // Move up
+                } else {
+                    if(laneType == 1) {
+                        // BL1: Incoming - Turn RIGHT (towards East/Road C exit)
+                        v->y -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->x += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    } else if(laneType == 2) {
+                        // BL2: Control - Go STRAIGHT (continue up)
+                        v->y -= VEHICLE_SPEED;
+                    } else {
+                        // BL3: Free - Turn LEFT (towards West/Road D exit)
+                        v->y -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->x -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    }
+                }
+                if(v->y < -VEHICLE_HEIGHT*2 || 
+                   v->x < -VEHICLE_WIDTH*2 || v->x > WINDOW_WIDTH + VEHICLE_WIDTH*2) {
+                    v->active = false;
+                }
+            }
+            // Road C: Coming from EAST (moving LEFT)
+            else if(v->road == 'C') {
+                if(!inJunction) {
+                    v->x -= VEHICLE_SPEED; // Move left
+                } else {
+                    if(laneType == 1) {
+                        // CL1: Incoming - Turn RIGHT (towards North/Road A exit)
+                        v->x -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->y -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    } else if(laneType == 2) {
+                        // CL2: Control - Go STRAIGHT (continue left)
+                        v->x -= VEHICLE_SPEED;
+                    } else {
+                        // CL3: Free - Turn LEFT (towards South/Road B exit)
+                        v->x -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->y += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    }
+                }
+                if(v->x < -VEHICLE_WIDTH*2 || 
+                   v->y < -VEHICLE_HEIGHT*2 || v->y > WINDOW_HEIGHT + VEHICLE_HEIGHT*2) {
+                    v->active = false;
+                }
+            }
+            // Road D: Coming from WEST (moving RIGHT)
+            else if(v->road == 'D') {
+                if(!inJunction) {
+                    v->x += VEHICLE_SPEED; // Move right
+                } else {
+                    if(laneType == 1) {
+                        // DL1: Incoming - Turn RIGHT (towards South/Road B exit)
+                        v->x += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->y += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    } else if(laneType == 2) {
+                        // DL2: Control - Go STRAIGHT (continue right)
+                        v->x += VEHICLE_SPEED;
+                    } else {
+                        // DL3: Free - Turn LEFT (towards North/Road A exit)
+                        v->x += VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                        v->y -= VEHICLE_SPEED * TURN_SPEED_FACTOR;
+                    }
+                }
+                if(v->x > WINDOW_WIDTH + VEHICLE_WIDTH*2 || 
+                   v->y < -VEHICLE_HEIGHT*2 || v->y > WINDOW_HEIGHT + VEHICLE_HEIGHT*2) {
+                    v->active = false;
+                }
             }
         }
         
+        // Remove inactive vehicles and count passed vehicles
         int count = queueSize(q);
         for(int k=0; k<count; k++){
             Vehicle frontV = dequeue(q);
             if(frontV.active) {
                 enqueue(q, frontV);
-            } else if(laneTypes[i] == 2) {
+            } else if(laneType == 2) {
+                // Only count control lane vehicles
                 vehiclesPassed[i/3]++;
             }
         }
     }
     
     SDL_UnlockMutex(mutex);
-}
+}}
 
 int calculateVehiclesToServe() {
     int totalVehicles = 0;
-    int normalLanes = 0;
+    int activeLanes = 0;
     
     for(int i=0; i<4; i++){
-        if(i == ROAD_A && isPriorityMode) continue;  // Skip AL2 in normal calculation
+        if(i == ROAD_A && isPriorityMode) continue;
+        
         int count = queueSize(controlLanes[i]);
         if(count > 0) {
             totalVehicles += count;
-            normalLanes++;
+            activeLanes++;
         }
     }
     
-    if(normalLanes == 0) return 1;
-    return (totalVehicles + normalLanes - 1) / normalLanes;  // Ceiling division
+    if(activeLanes == 0) return 1;
+    
+    int avgVehicles = (totalVehicles + activeLanes - 1) / activeLanes;
+    return (avgVehicles > 0) ? avgVehicles : 1;
 }
 
 void updateTrafficLights() {
     Uint32 now = SDL_GetTicks();
     
-    // Check if current green light should end
-    if(currentGreen >= 0 && (now - greenLightStartTime) >= greenLightDuration) {
-        currentGreen = -1;
-        printf("Light cycle ended\n");
+    if(currentGreen >= 0) {
+        if((now - greenLightStartTime) >= greenLightDuration) {
+            printf("Light cycle ended for Road %c\n", 'A' + currentGreen);
+            currentGreen = -1;
+        } else {
+            return;
+        }
     }
     
-    // If no light is green, determine next
-    if(currentGreen < 0) {
-        SDL_LockMutex(mutex);
-        
-        // Check priority condition for AL2
-        int al2Count = queueSize(&AL2);
-        
-        if(al2Count >= PRIORITY_THRESHOLD_HIGH) {
-            isPriorityMode = true;
-            currentGreen = ROAD_A;
-            int vehiclesToServe = al2Count;
-            greenLightDuration = vehiclesToServe * TIME_PER_VEHICLE;
-            printf("PRIORITY MODE: AL2 has %d vehicles, serving for %d ms\n", 
-                   al2Count, greenLightDuration);
-        } else if(isPriorityMode && al2Count < PRIORITY_THRESHOLD_LOW) {
-            isPriorityMode = false;
-            printf("Priority mode ended, AL2 count: %d\n", al2Count);
+    if(!mutex) return;
+    SDL_LockMutex(mutex);
+    
+    int al2Count = queueSize(&AL2);
+    
+    if(al2Count >= PRIORITY_THRESHOLD_HIGH && !isPriorityMode) {
+        isPriorityMode = true;
+        priorityActivations++;
+        currentGreen = ROAD_A;
+        greenLightDuration = al2Count * TIME_PER_VEHICLE;
+        if(greenLightDuration < MIN_GREEN_DURATION) {
+            greenLightDuration = MIN_GREEN_DURATION;
         }
-        
-        // Normal mode
-        if(!isPriorityMode && currentGreen < 0) {
-            // Serve lanes in round-robin with calculated time
-            static int lastServed = -1;
-            int attempts = 0;
-            
-            do {
-                lastServed = (lastServed + 1) % NUM_ROADS;
-                attempts++;
-                if(attempts > NUM_ROADS) {
-                    lastServed = 0;
-                    break;
-                }
-            } while(queueSize(controlLanes[lastServed]) == 0);
-            
-            if(queueSize(controlLanes[lastServed]) > 0) {
-                currentGreen = lastServed;
-                int vehiclesToServe = calculateVehiclesToServe();
-                greenLightDuration = vehiclesToServe * TIME_PER_VEHICLE;
-                printf("Normal mode: Serving Road %c, vehicles=%d, duration=%d ms\n",
-                       'A'+currentGreen, vehiclesToServe, greenLightDuration);
-            }
-        }
-        
         greenLightStartTime = now;
+        printf(">>> PRIORITY MODE ACTIVATED: AL2=%d vehicles, duration=%u ms\n", 
+               al2Count, greenLightDuration);
         SDL_UnlockMutex(mutex);
+        return;
     }
+    
+    if(isPriorityMode && al2Count < PRIORITY_THRESHOLD_LOW) {
+        isPriorityMode = false;
+        printf(">>> Priority mode ENDED: AL2=%d vehicles\n", al2Count);
+    }
+    
+    if(!isPriorityMode) {
+        int attempts = 0;
+        int nextRoad = lastServedRoad;
+        
+        do {
+            nextRoad = (nextRoad + 1) % NUM_ROADS;
+            attempts++;
+            
+            if(attempts > NUM_ROADS) {
+                nextRoad = 0;
+                break;
+            }
+        } while(queueSize(controlLanes[nextRoad]) == 0);
+        
+        if(queueSize(controlLanes[nextRoad]) > 0) {
+            currentGreen = nextRoad;
+            lastServedRoad = nextRoad;
+            
+            int vehiclesToServe = calculateVehiclesToServe();
+            greenLightDuration = vehiclesToServe * TIME_PER_VEHICLE;
+            
+            if(greenLightDuration < MIN_GREEN_DURATION) {
+                greenLightDuration = MIN_GREEN_DURATION;
+            }
+            
+            greenLightStartTime = now;
+            
+            printf("Normal mode: Road %c | Vehicles=%d | Duration=%u ms | ",
+                   'A'+currentGreen, vehiclesToServe, greenLightDuration);
+            printf("Queue sizes: AL2=%d BL2=%d CL2=%d DL2=%d\n",
+                   queueSize(&AL2), queueSize(&BL2), 
+                   queueSize(&CL2), queueSize(&DL2));
+        }
+    }
+    
+    SDL_UnlockMutex(mutex);
 }
 
 void drawStats() {
-    // Draw queue sizes and statistics
-    char stats[256];
-    SDL_Color white = {255, 255, 255, 255};
-    
-    sprintf(stats, "AL2:%d BL2:%d CL2:%d DL2:%d | Mode:%s | Green:%c",
+    char stats[512];
+    snprintf(stats, sizeof(stats), 
+            "AL2:%d BL2:%d CL2:%d DL2:%d | Mode:%s | Green:%c | Total:%d | Passed:%d | Priority:%d",
             queueSize(&AL2), queueSize(&BL2), queueSize(&CL2), queueSize(&DL2),
-            isPriorityMode ? "PRIORITY" : "NORMAL",
-            currentGreen >= 0 ? 'A'+currentGreen : '-');
+            isPriorityMode ? "PRIORITY" : "NORMAL ",
+            currentGreen >= 0 ? 'A'+currentGreen : '-',
+            totalVehiclesGenerated,
+            vehiclesPassed[0]+vehiclesPassed[1]+vehiclesPassed[2]+vehiclesPassed[3],
+            priorityActivations);
     
-    // Simple text rendering (you'll need SDL_ttf for proper text)
     printf("\r%s", stats);
     fflush(stdout);
 }
 
 void readVehiclesFromFiles() {
-    char* files[] = {"lanea.txt", "laneb.txt", "lanec.txt", "laned.txt"};
-    char roads[] = "ABCD";
+    const char* files[] = {"lanea.txt", "laneb.txt", "lanec.txt", "laned.txt"};
+    const char roads[] = "ABCD";
     
     for(int i=0; i<4; i++){
         FILE* f = fopen(files[i], "r");
         if(!f) continue;
         
         char line[128];
+        
         while(fgets(line, sizeof(line), f)){
             int lane;
             if(sscanf(line, "%d", &lane) == 1 && lane >= 1 && lane <= 3){
                 Vehicle v = createVehicle(roads[i], lane);
                 
+                if(!mutex) continue;
                 SDL_LockMutex(mutex);
                 Queue* targetQueue = lanes[i*3 + (lane-1)];
-                enqueue(targetQueue, v);
+                
+                if(!isFull(targetQueue) && !checkCollision(targetQueue, v.x, v.y)) {
+                    enqueue(targetQueue, v);
+                    totalVehiclesGenerated++;
+                }
+                
                 SDL_UnlockMutex(mutex);
             }
         }
         fclose(f);
         
-        // Clear file after reading
+        // Clear file
         f = fopen(files[i], "w");
         if(f) fclose(f);
     }
+}
+
+void cleanup() {
+    if(renderer) SDL_DestroyRenderer(renderer);
+    if(window) SDL_DestroyWindow(window);
+    if(mutex) SDL_DestroyMutex(mutex);
+    SDL_Quit();
 }
 
 int main(int argc, char *argv[])
@@ -367,14 +578,19 @@ int main(int argc, char *argv[])
     initAllQueues();
     initLanesArray();
     srand((unsigned int)time(NULL));
+    
     mutex = SDL_CreateMutex();
+    if(!mutex) {
+        printf("Failed to create mutex: %s\n", SDL_GetError());
+        return 1;
+    }
 
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL Init Error: %s\n", SDL_GetError());
         return 1;
     }
 
-    window = SDL_CreateWindow("Traffic Junction Simulator - DSA Assignment",
+    window = SDL_CreateWindow("Traffic Junction Simulator - DSA Queue Assignment",
                 SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                 WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     if(!window) {
@@ -383,32 +599,44 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if(!renderer) {
         printf("Renderer Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+        cleanup();
         return 1;
     }
 
     bool running = true;
     Uint32 lastFileRead = SDL_GetTicks();
 
-    printf("Traffic Simulator Started\n");
-    printf("=========================\n");
+    printf("\n========================================\n");
+    printf("   Traffic Junction Simulator Started\n");
+    printf("========================================\n");
+    printf("Lane Behavior:\n");
+    printf("  L1 (Incoming): Turn RIGHT - Always move\n");
+    printf("  L2 (Control):  Go STRAIGHT - Obey traffic lights\n");
+    printf("  L3 (Free):     Turn LEFT - Always move\n");
+    printf("\n");
     printf("AL2 is PRIORITY LANE\n");
-    printf("Priority activates at %d vehicles\n", PRIORITY_THRESHOLD_HIGH);
-    printf("Priority ends at %d vehicles\n\n", PRIORITY_THRESHOLD_LOW);
+    printf("Priority activates: >=%d vehicles\n", PRIORITY_THRESHOLD_HIGH);
+    printf("Priority ends: <%d vehicles\n", PRIORITY_THRESHOLD_LOW);
+    printf("Min green light: %d ms\n", MIN_GREEN_DURATION);
+    printf("Time per vehicle: %d ms\n", TIME_PER_VEHICLE);
+    printf("========================================\n\n");
 
     while(running) {
         SDL_Event e;
         while(SDL_PollEvent(&e)) {
-            if(e.type == SDL_QUIT) running = false;
+            if(e.type == SDL_QUIT) {
+                running = false;
+            }
+            if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
+                running = false;
+            }
         }
 
-        // Read vehicle data from files periodically
         Uint32 now = SDL_GetTicks();
-        if(now - lastFileRead > 500) {  // Read every 500ms
+        if(now - lastFileRead >= 500) {
             readVehiclesFromFiles();
             lastFileRead = now;
         }
@@ -416,7 +644,6 @@ int main(int argc, char *argv[])
         updateTrafficLights();
         moveVehicles();
 
-        // Render
         drawBackground();
         drawRoads();
         drawLights();
@@ -432,16 +659,21 @@ int main(int argc, char *argv[])
         SDL_Delay(16);
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_DestroyMutex(mutex);
-    SDL_Quit();
-    
-    printf("\n\nSimulation Statistics:\n");
-    printf("Road A passed: %d\n", vehiclesPassed[0]);
-    printf("Road B passed: %d\n", vehiclesPassed[1]);
-    printf("Road C passed: %d\n", vehiclesPassed[2]);
-    printf("Road D passed: %d\n", vehiclesPassed[3]);
-    
+    printf("\n\n");
+    printf("========================================\n");
+    printf("      Simulation Statistics\n");
+    printf("========================================\n");
+    printf("Total vehicles generated: %d\n", totalVehiclesGenerated);
+    printf("Vehicles passed through junction:\n");
+    printf("  Road A (AL2): %d\n", vehiclesPassed[0]);
+    printf("  Road B (BL2): %d\n", vehiclesPassed[1]);
+    printf("  Road C (CL2): %d\n", vehiclesPassed[2]);
+    printf("  Road D (DL2): %d\n", vehiclesPassed[3]);
+    printf("  Total: %d\n", 
+           vehiclesPassed[0]+vehiclesPassed[1]+vehiclesPassed[2]+vehiclesPassed[3]);
+    printf("Priority mode activations: %d\n", priorityActivations);
+    printf("========================================\n");
+
+    cleanup();
     return 0;
 }

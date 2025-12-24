@@ -3,7 +3,7 @@
 #include <time.h>
 #include <windows.h>
 
-#define GENERATION_INTERVAL 2000  // Generate vehicle every 2 seconds
+#define GENERATION_INTERVAL 5000 // Generate vehicle every 2 seconds
 #define AL2_PRIORITY_CHANCE 30    // 30% chance for AL2 (priority lane)
 
 typedef struct {
@@ -22,12 +22,53 @@ void generateVehicle(VehicleData* v) {
     } else {
         char roads[] = "ABCD";
         v->road = roads[rand() % 4];
+        if(v->road =='A'){
+            int lane_rand = rand() %100;
+            if(lane_rand < 70){
+                v-> lane= 2;
+            }else{
+                v->lane = 3;
+            }
+            
+        }
+        else if(v->road == 'B'){
+            int lane_rand = rand()%100;
+            if(lane_rand < 70){
+                v-> lane =2;
+    
+            }
+            else{
+                v-> lane = 1;
+            }
+        }
+         else if(v->road == 'C'){
+            int lane_rand = rand()%100;
+            if(lane_rand < 70){
+                v-> lane =2;
+    
+            }
+            else{
+                v-> lane = 3;
+            }
+        }
+        else if(v->road == 'D'){
+            int lane_rand = rand()%100;
+            if(lane_rand < 70){
+                v-> lane =2;
+    
+            }
+            else{
+                v-> lane = 1;
+            }
+        }
+        
+        
         
         // Lane distribution:
         // Lane 1: 30% (incoming)
         // Lane 2: 50% (control lane)
         // Lane 3: 20% (free lane - left turn)
-        int lane_rand = rand() % 100;
+       /*int lane_rand = rand() % 100;
         if(lane_rand < 30) {
             v->lane = 1;
         } else if(lane_rand < 80) {
@@ -35,7 +76,7 @@ void generateVehicle(VehicleData* v) {
         } else {
             v->lane = 3;
         }
-    }
+    }*/}
     
     v->timestamp = (unsigned int)time(NULL);
 }

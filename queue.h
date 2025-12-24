@@ -14,6 +14,8 @@ typedef struct {
     int x, y;       // Position
     bool active;    // Still in simulation
     Uint32 arrivalTime;  // When vehicle entered queue
+    char dir;
+    bool hasTurned;
 } Vehicle;
 
 // Queue structure
