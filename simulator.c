@@ -77,8 +77,8 @@ bool isInJunction(Vehicle* v) {
     int centerY = WINDOW_HEIGHT/2;
     int junctionSize = ROAD_WIDTH/2 + 10;
     
-    return (v->x >= (centerX - junctionSize) && v->x <= (centerX + junctionSize) &&
-            v->y >= (centerY - junctionSize) && v->y <= (centerY + junctionSize));
+    return (v->x >= (centerX - junctionSize+23) && v->x <= (centerX + junctionSize -37) &&
+            v->y >= (centerY - junctionSize+20) && v->y <= (centerY + junctionSize-45));
 }
 
 bool checkCollision(Queue* q, float x, float y) {
@@ -289,22 +289,20 @@ void moveVehicles() {
             
             bool inJunction = isInJunction(v);
             
-            // ═══════════════════════════════════════════════════════════
-            // Road A: Coming from NORTH (moving DOWN ↓)
-            // ═══════════════════════════════════════════════════════════
+           
             if(v->road == 'A') {
                 if (!inJunction && !v->hasTurned) {
                     v->y += VEHICLE_SPEED;
                 }
                 else if (inJunction && !v->hasTurned) {
                     if (laneType == 1) {
-                        v->dir = 'L';  // Right turn → WEST
+                        v->dir = 'L';  
                     }
                     else if (laneType == 2) {
-                        v->dir = 'D';  // Straight → DOWN
+                        v->dir = 'D'; 
                     }
                     else if (laneType == 3) {
-                        v->dir = 'R';  // Left turn → EAST
+                        v->dir = 'R'; 
                     }
                     v->hasTurned = true;
                 }
