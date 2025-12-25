@@ -3,7 +3,7 @@
 #include <time.h>
 #include <windows.h>
 
-#define GENERATION_INTERVAL 5000 // Generate vehicle every 2 seconds
+#define GENERATION_INTERVAL 3000// Generate vehicle every 2 seconds
 #define AL2_PRIORITY_CHANCE 30    // 30% chance for AL2 (priority lane)
 
 typedef struct {
@@ -11,6 +11,8 @@ typedef struct {
     int lane;
     unsigned int timestamp;
 } VehicleData;
+
+
 
 void generateVehicle(VehicleData* v) {
     int rand_val = rand() % 100;
@@ -38,7 +40,7 @@ void generateVehicle(VehicleData* v) {
     
             }
             else{
-                v-> lane = 1;
+                v-> lane = 3;
             }
         }
          else if(v->road == 'C'){
@@ -58,7 +60,7 @@ void generateVehicle(VehicleData* v) {
     
             }
             else{
-                v-> lane = 1;
+                v-> lane = 3;
             }
         }
         
