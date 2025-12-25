@@ -46,10 +46,13 @@ Separate thread manages continuous vehicle generation.
 The algorithm used for processing traffic are
 
 • Vehicle Generation: Randomly generate vehicles in any lane at intervals (1 sec)
+
 • Traffic Light Control: Cycle through roads, one green light at a time, for LIGHT_DURATION
+
 • Vehicle Movement:
  – Vehicles move only if their road’s light is green
  – High-priority vehicles handled via priority queue if implemented
+ 
 • Queue Management:
  – Vehicles enter lane queues in order
  – Vehicles leave queue when they cross the junction.
@@ -57,10 +60,14 @@ The algorithm used for processing traffic are
  ⏱️Time Complexity Analysis
 
 • Enqueue / Dequeue (Queue): O(1) – constant time for adding/removing a vehicle
+
 • Queue Iteration for Movement: O(n) – iterate over all vehicles in a lane
+
 • Traffic Light Switching: O(1) – simple modulo arithmetic
+
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
