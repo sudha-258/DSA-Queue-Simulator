@@ -37,4 +37,4 @@ int queueSize(Queue* q);
 void displayQueue(Queue* q);
 void clearQueue(Queue* q);
 
-#endif // QUEUE_H
+#endif 

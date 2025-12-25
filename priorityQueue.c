@@ -93,7 +93,7 @@ RoadData pqExtractMin(PriorityQueue* pq) {
     return min;
 }
 
-// Peek at highest priority road without removing
+
 RoadData pqPeek(PriorityQueue* pq) {
     RoadData empty = {-1, 0, INT_MAX, false};
     

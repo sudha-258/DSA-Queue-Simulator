@@ -29,9 +29,9 @@ RoadData pqPeek(PriorityQueue* pq);
 void pqUpdatePriority(PriorityQueue* pq, int roadIndex, int newPriority);
 void displayPriorityQueue(PriorityQueue* pq);
 
-// Helper functions
+
 void heapifyUp(PriorityQueue* pq, int index);
 void heapifyDown(PriorityQueue* pq, int index);
 void swap(RoadData* a, RoadData* b);
 
-#endif // PRIORITY_QUEUE_H
+#endif 
