@@ -1,4 +1,6 @@
 ﻿🚦 DSA-Queue-Simulator
+
+ 
 The purpose of this assignment was to simulate traffic management at a four-road junction using queue data structures. Each road has multiple lanes, with one priority lane per road. The system is designed to:
 
 Serve vehicles fairly under normal conditions.
@@ -21,3 +23,4 @@ Vehicle Queue: Stores vehicles waiting on each lane.
 
 
 Lane/Light Priority Queue: Determines which lane is served next based on vehicle counts and priority conditions.
+
