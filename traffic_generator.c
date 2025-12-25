@@ -3,7 +3,7 @@
 #include <time.h>
 #include <windows.h>
 
-#define GENERATION_INTERVAL 3000// Generate vehicle every 2 seconds
+#define GENERATION_INTERVAL 2000// Generate vehicle every 2 seconds
 #define AL2_PRIORITY_CHANCE 30    // 30% chance for AL2 (priority lane)
 
 typedef struct {
@@ -63,22 +63,7 @@ void generateVehicle(VehicleData* v) {
                 v-> lane = 3;
             }
         }
-        
-        
-        
-        // Lane distribution:
-        // Lane 1: 30% (incoming)
-        // Lane 2: 50% (control lane)
-        // Lane 3: 20% (free lane - left turn)
-       /*int lane_rand = rand() % 100;
-        if(lane_rand < 30) {
-            v->lane = 1;
-        } else if(lane_rand < 80) {
-            v->lane = 2;
-        } else {
-            v->lane = 3;
-        }
-    }*/}
+    }
     
     v->timestamp = (unsigned int)time(NULL);
 }
@@ -107,22 +92,6 @@ void writeVehicleToFile(VehicleData* v) {
            v->road, v->lane, v->timestamp);
 }
 
-void displayStats(int counts[4][3]) {
-    printf("\n--- Vehicle Generation Statistics ---\n");
-    printf("Road A: L1=%d, L2=%d (PRIORITY), L3=%d | Total=%d\n", 
-           counts[0][0], counts[0][1], counts[0][2], 
-           counts[0][0]+counts[0][1]+counts[0][2]);
-    printf("Road B: L1=%d, L2=%d, L3=%d | Total=%d\n", 
-           counts[1][0], counts[1][1], counts[1][2],
-           counts[1][0]+counts[1][1]+counts[1][2]);
-    printf("Road C: L1=%d, L2=%d, L3=%d | Total=%d\n", 
-           counts[2][0], counts[2][1], counts[2][2],
-           counts[2][0]+counts[2][1]+counts[2][2]);
-    printf("Road D: L1=%d, L2=%d, L3=%d | Total=%d\n", 
-           counts[3][0], counts[3][1], counts[3][2],
-           counts[3][0]+counts[3][1]+counts[3][2]);
-    printf("-------------------------------------\n\n");
-}
 
 int main(int argc, char* argv[])
 {
@@ -134,14 +103,7 @@ int main(int argc, char* argv[])
     f = fopen("laneb.txt", "w"); if(f) fclose(f);
     f = fopen("lanec.txt", "w"); if(f) fclose(f);
     f = fopen("laned.txt", "w"); if(f) fclose(f);
-    
-    printf("=========================================\n");
-    printf("  Traffic Vehicle Generator Started\n");
-    printf("=========================================\n");
-    printf("Generating vehicles every %d ms\n", GENERATION_INTERVAL);
-    printf("AL2 (Priority Lane) chance: %d%%\n", AL2_PRIORITY_CHANCE);
-    printf("Press Ctrl+C to stop\n\n");
-    
+   
     int vehicleCount = 0;
     int counts[4][3] = {0};  // [road][lane]
     
@@ -154,10 +116,7 @@ int main(int argc, char* argv[])
         int roadIdx = v.road - 'A';
         counts[roadIdx][v.lane - 1]++;
         
-        // Display stats every 10 vehicles
-        if(vehicleCount % 10 == 0) {
-            displayStats(counts);
-        }
+    
         
         Sleep(GENERATION_INTERVAL);
     }

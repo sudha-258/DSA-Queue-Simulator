@@ -13,7 +13,7 @@
 #define LANE_WIDTH 60
 #define VEHICLE_WIDTH 25
 #define VEHICLE_HEIGHT 35
-#define VEHICLE_SPEED 3.0
+#define VEHICLE_SPEED 2.0
 #define NUM_ROADS 4
 #define TIME_PER_VEHICLE 1000
 #define PRIORITY_THRESHOLD_HIGH 10
@@ -116,28 +116,28 @@ Vehicle createVehicle(char road, int lane) {
     int reversedLaneOffset = (3 - lane) * LANE_WIDTH;
     
     switch(road) {
-        case 'A': // From North (top)
+        case 'A': // From North 
             v.x = baseX + laneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
             v.y = -VEHICLE_HEIGHT - (rand() % 100);
             v.dir = 'D';  // Moving DOWN
             break;
             
-        case 'B': // From South (bottom) 
+        case 'B': // From South
             v.x = baseX + reversedLaneOffset + (LANE_WIDTH - VEHICLE_WIDTH) / 2;
             v.y = WINDOW_HEIGHT + (rand() % 100);
             v.dir = 'U';  // Moving UP
             break;
             
-        case 'C': // From East (right)
+        case 'C': // From East 
             v.x = WINDOW_WIDTH + (rand() % 100);
             v.y = baseY + laneOffset + (LANE_WIDTH - VEHICLE_HEIGHT) / 2;
-            v.dir = 'L';  // Moving LEFT (FIX: was 'R')
+            v.dir = 'L';  // Moving LEFT
             break;
             
-        case 'D': // From West (left)
+        case 'D': // From West 
             v.x = -VEHICLE_WIDTH - (rand() % 100);
             v.y = baseY + reversedLaneOffset + (LANE_WIDTH - VEHICLE_HEIGHT) / 2;
-            v.dir = 'R';  // Moving RIGHT (FIX: was 'L')
+            v.dir = 'R';  // Moving RIGHT
             break;
     }
     return v;
@@ -310,8 +310,8 @@ void moveVehicles() {
                     switch (v->dir) {
                         case 'D': v->y += VEHICLE_SPEED; break;  // Down
                         case 'U': v->y -= VEHICLE_SPEED; break;  // Up
-                        case 'L': v->x -= VEHICLE_SPEED; break;  // Left (West)
-                        case 'R': v->x += VEHICLE_SPEED; break;  // Right (East)
+                        case 'L': v->x -= VEHICLE_SPEED; break;  // Left 
+                        case 'R': v->x += VEHICLE_SPEED; break;  // Right 
                     }
                 }
                 if(v->y > WINDOW_HEIGHT + VEHICLE_HEIGHT || 
@@ -320,31 +320,29 @@ void moveVehicles() {
                 }
             }
             
-            // ═══════════════════════════════════════════════════════════
-            // Road B: Coming from SOUTH (moving UP ↑)
-            // ═══════════════════════════════════════════════════════════
+           
             else if(v->road == 'B') {
                 if (!inJunction && !v->hasTurned) {
                     v->y -= VEHICLE_SPEED;
                 }
                 else if (inJunction && !v->hasTurned) {
                     if (laneType == 1) {
-                        v->dir = 'R';  // Right turn → EAST
+                        v->dir = 'R';  
                     }
                     else if (laneType == 2) {
-                        v->dir = 'U';  // Straight → UP
+                        v->dir = 'U'; 
                     }
                     else if (laneType == 3) {
-                        v->dir = 'L';  // Left turn → WEST
+                        v->dir = 'L';  
                     }
                     v->hasTurned = true;
                 }
                 else {
                     switch (v->dir) {
-                        case 'D': v->y += VEHICLE_SPEED; break;  // Down
-                        case 'U': v->y -= VEHICLE_SPEED; break;  // Up
-                        case 'L': v->x -= VEHICLE_SPEED; break;  // Left (West)
-                        case 'R': v->x += VEHICLE_SPEED; break;  // Right (East)
+                        case 'D': v->y += VEHICLE_SPEED; break;  
+                        case 'U': v->y -= VEHICLE_SPEED; break;  
+                        case 'L': v->x -= VEHICLE_SPEED; break;  
+                        case 'R': v->x += VEHICLE_SPEED; break;  
                     }
                 }
                 if(v->y < -VEHICLE_HEIGHT*2 || 
@@ -353,31 +351,28 @@ void moveVehicles() {
                 }
             }
             
-            // ═══════════════════════════════════════════════════════════
-            // Road C: Coming from EAST (moving LEFT ←)
-            // ═══════════════════════════════════════════════════════════
             else if(v->road == 'C') {
                 if (!inJunction && !v->hasTurned) {
                     v->x -= VEHICLE_SPEED;
                 }
                 else if (inJunction && !v->hasTurned) {
                     if (laneType == 1) {
-                        v->dir = 'U';  // Right turn → NORTH
+                        v->dir = 'U';  
                     }
                     else if (laneType == 2) {
-                        v->dir = 'L';  // Straight → LEFT
+                        v->dir = 'L';  
                     }
                     else if (laneType == 3) {
-                        v->dir = 'D';  // Left turn → SOUTH
+                        v->dir = 'D';  
                     }
                     v->hasTurned = true;
                 }
                 else {
                     switch (v->dir) {
-                        case 'D': v->y += VEHICLE_SPEED; break;  // Down
-                        case 'U': v->y -= VEHICLE_SPEED; break;  // Up
-                        case 'L': v->x -= VEHICLE_SPEED; break;  // Left (West)
-                        case 'R': v->x += VEHICLE_SPEED; break;  // Right (East)
+                        case 'D': v->y += VEHICLE_SPEED; break; 
+                        case 'U': v->y -= VEHICLE_SPEED; break;  
+                        case 'L': v->x -= VEHICLE_SPEED; break;  
+                        case 'R': v->x += VEHICLE_SPEED; break; 
                     }
                 }
                 if(v->x < -VEHICLE_WIDTH*2 || 
@@ -386,31 +381,28 @@ void moveVehicles() {
                 }
             }
             
-            // ═══════════════════════════════════════════════════════════
-            // Road D: Coming from WEST (moving RIGHT →)
-            // ═══════════════════════════════════════════════════════════
             else if(v->road == 'D') {
                 if (!inJunction && !v->hasTurned) {
                     v->x += VEHICLE_SPEED;
                 }
                 else if (inJunction && !v->hasTurned) {
                     if (laneType == 1) {
-                        v->dir = 'D';  // Right turn → SOUTH
+                        v->dir = 'D'; 
                     }
                     else if (laneType == 2) {
-                        v->dir = 'R';  // Straight → RIGHT
+                        v->dir = 'R';  
                     }
                     else if (laneType == 3) {
-                        v->dir = 'U';  // Left turn → NORTH
+                        v->dir = 'U'; 
                     }
                     v->hasTurned = true;
                 }
                 else {
                     switch (v->dir) {
-                        case 'D': v->y += VEHICLE_SPEED; break;  // Down
-                        case 'U': v->y -= VEHICLE_SPEED; break;  // Up
-                        case 'L': v->x -= VEHICLE_SPEED; break;  // Left (West)
-                        case 'R': v->x += VEHICLE_SPEED; break;  // Right (East)
+                        case 'D': v->y += VEHICLE_SPEED; break;  
+                        case 'U': v->y -= VEHICLE_SPEED; break;  
+                        case 'L': v->x -= VEHICLE_SPEED; break;  
+                        case 'R': v->x += VEHICLE_SPEED; break;  
                     }
                 }
                 if(v->x > WINDOW_WIDTH + VEHICLE_WIDTH*2 || 
@@ -620,19 +612,6 @@ int main(int argc, char *argv[])
     bool running = true;
     Uint32 lastFileRead = SDL_GetTicks();
 
-    printf("\n========================================\n");
-    printf("   Traffic Junction Simulator Started\n");
-    printf("========================================\n");
-    printf("Lane Behavior:\n");
-    printf("  L1 (Incoming): Turn RIGHT - Always move\n");
-    printf("  L2 (Control):  Go STRAIGHT - Obey lights\n");
-    printf("  L3 (Free):     Turn LEFT - Always move\n");
-    printf("\n");
-    printf("AL2 is PRIORITY LANE\n");
-    printf("Priority activates: >=%d vehicles\n", PRIORITY_THRESHOLD_HIGH);
-    printf("Priority ends: <%d vehicles\n", PRIORITY_THRESHOLD_LOW);
-    printf("========================================\n\n");
-
     while(running) {
         SDL_Event e;
         while(SDL_PollEvent(&e)) {
@@ -664,20 +643,7 @@ int main(int argc, char *argv[])
         SDL_Delay(16);
     }
 
-    printf("\n\n========================================\n");
-    printf("      Simulation Statistics\n");
-    printf("========================================\n");
-    printf("Total vehicles generated: %d\n", totalVehiclesGenerated);
-    printf("Vehicles passed:\n");
-    printf("  Road A (AL2): %d\n", vehiclesPassed[0]);
-    printf("  Road B (BL2): %d\n", vehiclesPassed[1]);
-    printf("  Road C (CL2): %d\n", vehiclesPassed[2]);
-    printf("  Road D (DL2): %d\n", vehiclesPassed[3]);
-    printf("  Total: %d\n", 
-           vehiclesPassed[0]+vehiclesPassed[1]+vehiclesPassed[2]+vehiclesPassed[3]);
-    printf("Priority activations: %d\n", priorityActivations);
-    printf("========================================\n");
-
+  
     cleanup();
     return 0;
 }
