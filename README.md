@@ -30,9 +30,11 @@ This project simulates a four-way traffic junction using queue data structures a
 
 🧩 <b>Algorithm Design</b><br>
 The algorithm used for processing traffic are<br>
-• Vehicle Generation: Randomly generate vehicles in any lane at intervals (1 sec)<br>
+• Vehicle Generation:<br>
+  -Randomly generate vehicles in any lane at intervals (1 sec)<br>
 
-• Traffic Light Control: Cycle through roads, one green light at a time, for LIGHT_DURATION<br>
+• Traffic Light Control:<br>
+  -Cycle through roads, one green light at a time, for LIGHT_DURATION<br>
 
 • Vehicle Movement:<br>
  – Vehicles move only if their road’s light is green<br>
@@ -50,6 +52,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
