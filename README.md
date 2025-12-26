@@ -3,6 +3,20 @@
 
 This project simulates a four-way traffic junction using queue data structures and traffic light timing control. Vehicles are generated randomly in different lanes, stored in queues, and move through the junction based on the active green signal. The system demonstrates how queues help manage traffic flow, avoid congestion, and prioritize smooth vehicle movement at intersections.
 
+<b>Project Demo<b><br>
+
+
+<b>Steps to run the program</b><br>
+   •Requirement:<br>
+    -GCC compiler
+    -SDL2
+   •Compilation code:
+     -For traffic_generator.c:   gcc traffic_generator.c -o generator.exe <br>
+     -For simulator.c:  gcc simulator.c queue.c priorityQueue.c -I"C:\Users\Sudha Karki\Downloads\Traffic Light\SDL2\include" <br>-L"C:\Users\Sudha              Karki\Downloads\Traffic Light\SDL2\lib" -lmingw32 -lSDL2main -lSDL2 -o sim.exe<br>
+     •To run:<br>
+      -For traffic_Generator.c: ./generator<br>
+      -For simulator.c: ./sim<br>
+
  <b> Key Features</b>
 
 •Queue-Based & Efficient Traffic Management:<br>
@@ -52,6 +66,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
