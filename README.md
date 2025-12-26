@@ -8,14 +8,14 @@ This project simulates a four-way traffic junction using queue data structures a
 -Queue-Based & Efficient Traffic Management:<br>
  Vehicles are stored and processed using queue and circular buffer structures, enabling organized, efficient lane handling.<br>
 
-Automated Multi-Lane Signal Control:<br>
-Traffic lights switch automatically at fixed intervals, and vehicles move only when their respective road receives a green signal.<br>
+-Automated Multi-Lane Signal Control:<br>
+ Traffic lights switch automatically at fixed intervals, and vehicles move only when their respective road receives a green signal.<br>
 
-Real-Time Simulation with SDL2:<br>
-Roads, lanes, vehicles, and signals are visually rendered with real-time movement and continuous vehicle generation.<br>
+-Real-Time Simulation with SDL2:<br>
+ Roads, lanes, vehicles, and signals are visually rendered with real-time movement and continuous vehicle generation.<br>
 
-Extendable & Multithreaded System<br>
-Supports future priority / emergency lanes and uses a separate thread for smooth, continuous vehicle generation and processing.
+-Extendable & Multithreaded System<br>
+ Supports future priority / emergency lanes and uses a separate thread for smooth, continuous vehicle generation and processing.
 
 
 📊Data Structure
@@ -50,6 +50,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
