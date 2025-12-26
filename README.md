@@ -64,12 +64,13 @@ The algorithm used for processing traffic are
 
  ⏱️<b>Time Complexity Analysis</b>
 
-• Enqueue / Dequeue (Queue): O(1) – constant time for adding/removing a vehicle
-• Queue Iteration for Movement: O(n) – iterate over all vehicles in a lane
-• Traffic Light Switching: O(1) – simple modulo arithmetic
+• Enqueue / Dequeue (Queue): O(1) – constant time for adding/removing a vehicle<br>
+• Queue Iteration for Movement: O(n) – iterate over all vehicles in a lane<br>
+• Traffic Light Switching: O(1) – simple modulo arithmetic<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
