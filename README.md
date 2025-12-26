@@ -4,6 +4,8 @@
 This project simulates a four-way traffic junction using queue data structures and traffic light timing control. Vehicles are generated randomly in different lanes, stored in queues, and move through the junction based on the active green signal. The system demonstrates how queues help manage traffic flow, avoid congestion, and prioritize smooth vehicle movement at intersections.
 
 <b>Project Demo</b><br>
+  ![Project Demo](demo.gif)
+
 
 
 <b>Steps to run the program</b><br>
