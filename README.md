@@ -1,39 +1,21 @@
 ﻿🚦 DSA-Queue-Simulator
-
- 
-
 📋Project Overview
 
 This project simulates a four-way traffic junction using queue data structures and traffic light timing control. Vehicles are generated randomly in different lanes, stored in queues, and move through the junction based on the active green signal. The system demonstrates how queues help manage traffic flow, avoid congestion, and prioritize smooth vehicle movement at intersections.
 
- 🔑<b> Key Features</b>
+ <b> Key Features</b>
 
-–🚗 Queue-Based Traffic Management:
-Vehicles in each lane are stored and processed using queue data structures.
+-Queue-Based & Efficient Traffic Management:<br>
+ Vehicles are stored and processed using queue and circular buffer structures, enabling organized, efficient lane handling.<br>
 
-–🚦 Automatic Traffic Light Switching:
-Signals change after fixed time intervals to control traffic flow.
+Automated Multi-Lane Signal Control:<br>
+Traffic lights switch automatically at fixed intervals, and vehicles move only when their respective road receives a green signal.<br>
 
-–🛣️ Multi-Lane Road System:
-Each road contains multiple lanes handled independently.
+Real-Time Simulation with SDL2:<br>
+Roads, lanes, vehicles, and signals are visually rendered with real-time movement and continuous vehicle generation.<br>
 
-–⚙️ Real-Time Vehicle Movement:
-Vehicles move only when their road gets a green signal.
-
-–🎯 Supports Priority / Special Lanes (Extendable):
-The structure allows future implementation of emergency or VIP lanes.
-
-–🧮 Efficient Data Structure Implementation:
-Demonstrates practical use of queues and circular buffers.
-
-–🖥️ Graphical Simulation using SDL2:
-Roads, lanes, vehicles, and traffic lights are visually rendered.
-
-–⏱️ Random Vehicle Generation System:
-New vehicles are generated at regular time intervals.
-
-–🧵 Multithreaded Vehicle Processing:
-Separate thread manages continuous vehicle generation.
+Extendable & Multithreaded System<br>
+Supports future priority / emergency lanes and uses a separate thread for smooth, continuous vehicle generation and processing.
 
 
 📊Data Structure
@@ -68,6 +50,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
