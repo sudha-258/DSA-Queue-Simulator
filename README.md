@@ -13,7 +13,8 @@ This project simulates a four-way traffic junction using queue data structures a
     
    •Compilation code:<br>
      -For traffic_generator.c:   gcc traffic_generator.c -o generator.exe <br>
-     -For simulator.c:  gcc simulator.c queue.c priorityQueue.c -I"C:\Users\Sudha Karki\Downloads\Traffic Light\SDL2\include" -L"C:\Users\Sudha              Karki\Downloads\Traffic Light\SDL2\lib" -lmingw32 -lSDL2main -lSDL2 -o sim.exe<br>
+     
+     -For simulator.c:  gcc simulator.c queue.c priorityQueue.c -I"C:\Users\Sudha Karki\Downloads\Traffic Light\SDL2\include" -L"C:\Users\Sudha                                               Karki\Downloads\Traffic Light\SDL2\lib" -lmingw32 -lSDL2main -lSDL2 -o sim.exe<br>
      
      •To run:<br>
       -For traffic_Generator.c: ./generator<br>
@@ -68,6 +69,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
