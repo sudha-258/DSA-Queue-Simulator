@@ -1,5 +1,5 @@
-﻿🚦 DSA-Queue-Simulator<br>
-📋Project Overview
+﻿🚦<b> DSA-Queue-Simulator</b><br>
+📋<b>Project Overview</b>
 
 This project simulates a four-way traffic junction using queue data structures and traffic light timing control. Vehicles are generated randomly in different lanes, stored in queues, and move through the junction based on the active green signal. The system demonstrates how queues help manage traffic flow, avoid congestion, and prioritize smooth vehicle movement at intersections.
 
@@ -34,7 +34,7 @@ This project simulates a four-way traffic junction using queue data structures a
  Supports future priority / emergency lanes and uses a separate thread for smooth, continuous vehicle generation and processing.
 
 
-📊Data Structure
+📊<b>Data Structure</b>
 | Data Structure  | Implementation | Purpose                                       |
 |---------------- |----------------|-----------------------------------------------|
 | Queue           | Circular Array | Store vehicles in each lane (12 queues total) |
@@ -68,6 +68,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
