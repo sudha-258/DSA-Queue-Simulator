@@ -37,11 +37,16 @@ Separate thread manages continuous vehicle generation.
 
 
 📊Data Structure
+| Data Structure  | Implementation | Purpose                                       |
+|---------------- |----------------|-----------------------------------------------|
+| Queue           | Circular Array | Store vehicles in each lane (12 queues total) |
+| Priority Queue  | Min-Heap       | Manage road serving priority                  |
+| Mutex Lock      | SDL_mutex      | Thread-safe queue operations                  |
 
 
 
 
-🧩 Algorithm Design
+🧩 <b>Algorithm Design</b>
 
 The algorithm used for processing traffic are
 
@@ -57,17 +62,15 @@ The algorithm used for processing traffic are
  – Vehicles enter lane queues in order
  – Vehicles leave queue when they cross the junction.
 
- ⏱️Time Complexity Analysis
+ ⏱️<b>Time Complexity Analysis</b>
 
 • Enqueue / Dequeue (Queue): O(1) – constant time for adding/removing a vehicle
-
 • Queue Iteration for Movement: O(n) – iterate over all vehicles in a lane
-
 • Traffic Light Switching: O(1) – simple modulo arithmetic
-
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
