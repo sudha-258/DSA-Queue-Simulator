@@ -7,7 +7,7 @@ This project simulates a four-way traffic junction using queue data structures a
 
 
 <b>Steps to run the program</b><br>
-   •Requirement:
+   •Requirement:<br>
     -GCC compiler<br>
     -SDL2<br>
     
@@ -68,6 +68,7 @@ The algorithm used for processing traffic are<br>
 • Overall Complexity per Frame: O(total vehicles)
 
  
+
 
 
 
